@@ -1,0 +1,17 @@
+spring:
+  application:
+    name: smartlogicticssystem
+  threads:
+    virtual:
+      enabled: true
+  datasource:
+    url: jdbc:postgresql://localhost:5432/smart_logistics
+    username: admin
+    password: HelloYoutube
+    driver-class-name: org.postgresql.Driver
+
+
+  jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    hibernate:
+      ddl-auto: none
