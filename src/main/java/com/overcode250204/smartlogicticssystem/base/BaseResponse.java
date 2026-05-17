@@ -18,4 +18,19 @@ public class BaseResponse<T> {
 
     @Builder.Default
     private LocalDateTime timestamp = LocalDateTime.now();
+
+    public static <T> BaseResponse<T> success(T data, String message) {
+        return BaseResponse.<T>builder()
+                .status(200)
+                .message(message)
+                .data(data)
+                .build();
+    }
+
+    public static <T> BaseResponse<T> error(int status, String message) {
+        return BaseResponse.<T>builder()
+                .status(status)
+                .message(message)
+                .build();
+    }
 }
