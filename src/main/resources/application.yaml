@@ -9,9 +9,20 @@ spring:
     username: admin
     password: HelloYoutube
     driver-class-name: org.postgresql.Driver
+<<<<<<< HEAD
+=======
 
 
+>>>>>>> parent of 290ea56 (feat(file-upload): integrate AWS S3 CSV upload with validation and error handling)
   jpa:
     database-platform: org.hibernate.dialect.PostgreSQLDialect
     hibernate:
       ddl-auto: none
+
+aws:
+  region: ${AWS_REGION}
+  s3:
+    bucket-name: ${AWS_BUCKET_NAME}
+  credentials:
+    access-key: ${AWS_ACCESS_KEY}
+    secret-key: ${AWS_SECRET_KEY}
