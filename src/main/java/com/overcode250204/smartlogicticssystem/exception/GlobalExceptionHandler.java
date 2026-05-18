@@ -7,6 +7,8 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
+import java.io.IOException;
+
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
@@ -24,9 +26,15 @@ public class GlobalExceptionHandler {
                         "An unexpected error occurred: " + e.getMessage()));
     }
 
+    @ExceptionHandler(IOException.class)
+    public ResponseEntity<BaseResponse<Void>> handleIOException(IOException e) {
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(BaseResponse.error(HttpStatus.INTERNAL_SERVER_ERROR.value(),
+                        "An unexpected error occurred: " + e.getMessage()));
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<BaseResponse<Void>> handleValidationException(
-            MethodArgumentNotValidException e) {
+    public ResponseEntity<BaseResponse<Void>> handleValidationException(MethodArgumentNotValidException e) {
         String message = e.getBindingResult().getFieldError().getDefaultMessage();
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(BaseResponse.error(HttpStatus.BAD_REQUEST.value(), message));

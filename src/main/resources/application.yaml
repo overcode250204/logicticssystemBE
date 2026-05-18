@@ -6,14 +6,9 @@ spring:
       enabled: true
   datasource:
     url: jdbc:postgresql://localhost:5432/smart_logistics
-    username: admin
-    password: HelloYoutube
+    username: postgres
+    password: root
     driver-class-name: org.postgresql.Driver
-<<<<<<< HEAD
-=======
-
-
->>>>>>> parent of 290ea56 (feat(file-upload): integrate AWS S3 CSV upload with validation and error handling)
   jpa:
     database-platform: org.hibernate.dialect.PostgreSQLDialect
     hibernate:
