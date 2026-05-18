@@ -31,9 +31,11 @@ public class UserService extends BaseServiceImpl implements IUserService {
     }
 
     @Override
-    public UserDTO create(UserDTO dto) {
-        Role role = findByIdOrThrow(roleRepository, dto.getRoleId(), RoleErrorCode.ROLE_ID_NOT_FOUND);
-
+    public UserDTO create(UserDTO dto, int roleId, int userId) {
+        Role role = findByIdOrThrow(roleRepository, roleId, RoleErrorCode.ROLE_ID_NOT_FOUND);
+        if (roleId != 1) {
+            throw new AppException(RoleErrorCode.ROLE_HAS_NO_PERMISSION);
+        }
 
         User user = userMapper.toEntity(dto);
         user.setRole(role);
@@ -43,9 +45,12 @@ public class UserService extends BaseServiceImpl implements IUserService {
     }
 
     @Override
-    public UserDTO update(Long id, UserDTO dto) {
-        User user = findByIdOrThrow(userRepository, id, UserErrorCode.USER_NOT_FOUND);
+    public UserDTO update(Long id, UserDTO dto, int roleId, int userId) {
         Role role = findByIdOrThrow(roleRepository, dto.getRoleId(), RoleErrorCode.ROLE_ID_NOT_FOUND);
+        if (roleId != 1) {
+            throw new AppException(RoleErrorCode.ROLE_HAS_NO_PERMISSION);
+        }
+        User user = findByIdOrThrow(userRepository, id, UserErrorCode.USER_NOT_FOUND);
         user.setRole(role);
         user.setFullName(dto.getFullName());
         user.setPhone(dto.getPhone());
@@ -59,13 +64,17 @@ public class UserService extends BaseServiceImpl implements IUserService {
     }
 
     @Override
-    public UserDTO getById(Long id) {
+    public UserDTO getById(Long id, int roleId, int userId) {
         User user = findByIdOrThrow(userRepository, id, UserErrorCode.USER_NOT_FOUND);
         return userMapper.toDTO(user);
     }
 
     @Override
-    public void delete(Long id) {
+    public void delete(Long id, int roleId, int userId) {
+        Role role = findByIdOrThrow(roleRepository, roleId, RoleErrorCode.ROLE_ID_NOT_FOUND);
+        if (roleId != 1) {
+            throw new AppException(RoleErrorCode.ROLE_HAS_NO_PERMISSION);
+        }
         User user = findByIdOrThrow(userRepository, id, UserErrorCode.USER_NOT_FOUND);
 
         user.setIsActive(false);
