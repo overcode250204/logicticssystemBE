@@ -10,21 +10,23 @@ import java.time.LocalDateTime;
 @Getter
 @Setter
 @Entity
-@Table(name = "Invoices")
+@Table(name = "invoices")
 public class Invoice {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "invoiceid")
     private Long invoiceId;
 
-    @Column(nullable = false, length = 50)
+    @Column(name = "invoicetype", nullable = false, length = 50)
     private String invoiceType;
 
-    @Column(nullable = false)
+    @Column(name = "totalamount", nullable = false)
     private BigDecimal totalAmount;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "CreatedBy", nullable = false)
+    @JoinColumn(name = "createdby", nullable = false)
     private User createdBy;
 
+    @Column(name = "createdat", updatable = false)
     private LocalDateTime createdAt = LocalDateTime.now();
 }

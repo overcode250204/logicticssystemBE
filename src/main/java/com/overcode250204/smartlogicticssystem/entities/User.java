@@ -1,38 +1,39 @@
-package com.overcode250204.smartlogicticssystem.entities;
+package com.overcode250204.smartlogicticssystem.entities; // Đảm bảo đúng package của bạn
 
 import jakarta.persistence.*;
-import lombok.Getter;
-import lombok.Setter;
-
+import lombok.Data;
 import java.time.LocalDateTime;
 
-@Getter
-@Setter
-@Entity(name = "Users")
+@Data
+@Entity
+@Table(name = "users")
 public class User {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "userid")
     private Long userId;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "RoleID", nullable = false)
+    @JoinColumn(name = "roleid", nullable = false)
     private Role role;
 
-    @Column(nullable = false, length = 100)
+
+    @Column(name = "fullname", nullable = false, length = 100)
     private String fullName;
 
-    @Column(nullable = false, unique = true, length = 100)
+    @Column(name = "email", nullable = false, unique = true, length = 100)
     private String email;
 
-    @Column(nullable = false)
+    @Column(name = "passwordhash", nullable = false)
     private String passwordHash;
 
-    @Column(length = 20)
+    @Column(name = "phone", length = 20)
     private String phone;
 
+    @Column(name = "isactive")
     private Boolean isActive = true;
 
-    @Column(updatable = false)
+    @Column(name = "createdat", updatable = false)
     private LocalDateTime createdAt = LocalDateTime.now();
 }

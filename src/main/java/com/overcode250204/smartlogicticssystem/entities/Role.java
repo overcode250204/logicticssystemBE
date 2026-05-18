@@ -3,22 +3,24 @@ package com.overcode250204.smartlogicticssystem.entities;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
-import lombok.ToString;
 
 import java.util.List;
 
 @Setter
 @Getter
-@Entity(name = "Roles")
+@Entity
+@Table(name = "roles")
 public class Role {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "roleid")
     private Integer roleId;
 
-    @Column(nullable = false, length = 50)
+    @Column(name = "rolename", nullable = false, length = 50)
     private String roleName;
 
+    @Column(name = "description")
     private String description;
 
     @OneToMany(mappedBy = "role")

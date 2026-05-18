@@ -3,33 +3,34 @@ package com.overcode250204.smartlogicticssystem.entities;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
-import lombok.ToString;
 
 import java.math.BigDecimal;
 import java.util.List;
 
 @Getter
 @Setter
-@Entity(name = "Products")
-
+@Entity
+@Table(name = "products")
 public class Product {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "productid")
     private Long productId;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "SupplierID", nullable = false)
+    @JoinColumn(name = "supplierid", nullable = false)
     private Supplier supplier;
 
-    @Column(nullable = false, unique = true, length = 50)
+    @Column(name = "productcode", nullable = false, unique = true, length = 50)
     private String productCode;
 
-    @Column(nullable = false, length = 150)
+    @Column(name = "productname", nullable = false, length = 150)
     private String productName;
 
+    @Column(name = "minstocklevel")
     private Integer minStockLevel = 10;
 
-    @Column(nullable = false)
+    @Column(name = "price", nullable = false)
     private BigDecimal price;
 }

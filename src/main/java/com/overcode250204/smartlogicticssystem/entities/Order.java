@@ -10,22 +10,26 @@ import java.time.LocalDateTime;
 @Getter
 @Setter
 @Entity
-@Table(name = "Orders")
+@Table(name = "orders")
 public class Order {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "orderid")
     private Long orderId;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "DriverID")
+    @JoinColumn(name = "driverid")
     private User driver;
 
-    @Column(nullable = false)
+    @Column(name = "destinationaddress", nullable = false)
     private String destinationAddress;
 
+    @Column(name = "orderstatus")
     private String orderStatus = "Pending";
 
+    @Column(name = "totalweight")
     private BigDecimal totalWeight;
 
+    @Column(name = "createdat", updatable = false)
     private LocalDateTime createdAt = LocalDateTime.now();
 }

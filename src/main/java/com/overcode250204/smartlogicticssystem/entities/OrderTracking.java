@@ -9,23 +9,27 @@ import java.time.LocalDateTime;
 
 @Setter
 @Getter
-@Entity(name = "OrderTracking")
+@Entity
+@Table(name = "ordertracking")
 public class OrderTracking {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "trackingid")
     private Long trackingId;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "OrderID", nullable = false)
+    @JoinColumn(name = "orderid", nullable = false)
     private Order order;
 
-    @Column(nullable = false, precision = 10, scale = 8)
+    @Column(name = "latitude", nullable = false, precision = 10, scale = 8)
     private BigDecimal latitude;
 
-    @Column(nullable = false, precision = 11, scale = 8)
+    @Column(name = "longitude", nullable = false, precision = 11, scale = 8)
     private BigDecimal longitude;
 
+    @Column(name = "recordedat", updatable = false)
     private LocalDateTime recordedAt = LocalDateTime.now();
 
+    @Column(name = "note")
     private String note;
 }

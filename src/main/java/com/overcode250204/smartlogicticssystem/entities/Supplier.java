@@ -8,18 +8,23 @@ import java.time.LocalDateTime;
 
 @Setter
 @Getter
-@Entity(name = "Suppliers")
+@Entity
+@Table(name = "suppliers")
 public class Supplier {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "supplierid")
     private Integer supplierId;
 
-    @Column(nullable = false, length = 150)
+    @Column(name = "suppliername", nullable = false, length = 150)
     private String supplierName;
 
+    @Column(name = "contactphone")
     private String contactPhone;
 
+    @Column(name = "address")
     private String address;
 
+    @Column(name = "createdat", updatable = false)
     private LocalDateTime createdAt = LocalDateTime.now();
 }

@@ -8,23 +8,28 @@ import java.time.LocalDateTime;
 
 @Setter
 @Getter
-@Entity(name = "InventoryBatches")
+@Entity
+@Table(name = "inventorybatches")
 public class InventoryBatch {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "batchid")
     private Long batchId;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "ProductID", nullable = false)
+    @JoinColumn(name = "productid", nullable = false)
     private Product product;
 
+    @Column(name = "importdate")
     private LocalDateTime importDate = LocalDateTime.now();
 
+    @Column(name = "expirationdate")
     private LocalDateTime expirationDate;
 
-    @Column(nullable = false)
+    @Column(name = "quantity", nullable = false)
     private Integer quantity;
 
+    @Column(name = "status")
     private String status = "Good";
 }
