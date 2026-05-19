@@ -26,4 +26,12 @@ public class AuthController extends BaseController {
         UserDTO response = authService.login(loginDTO.getEmail(), loginDTO.getPassword());
         return success(response, "Login Successful");
     }
+
+    @PostMapping("/register-driver")
+    public ResponseEntity<BaseResponse<UserDTO>> registerDriver(@RequestBody UserDTO userDTO) {
+        UserDTO response = authService.registerDriver(userDTO);
+        return success(response, "Driver Register Successful");
+    }
+
+
 }
