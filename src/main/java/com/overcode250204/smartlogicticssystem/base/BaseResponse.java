@@ -12,7 +12,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class BaseResponse<T> {
-    private int status;
+    private int statusCode;
     private String message;
     private T data;
 
@@ -21,7 +21,7 @@ public class BaseResponse<T> {
 
     public static <T> BaseResponse<T> success(T data, String message) {
         return BaseResponse.<T>builder()
-                .status(200)
+                .statusCode(200)
                 .message(message)
                 .data(data)
                 .build();
@@ -29,7 +29,7 @@ public class BaseResponse<T> {
 
     public static <T> BaseResponse<T> error(int status, String message) {
         return BaseResponse.<T>builder()
-                .status(status)
+                .statusCode(status)
                 .message(message)
                 .build();
     }
