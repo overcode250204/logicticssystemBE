@@ -6,8 +6,8 @@ import lombok.Setter;
 
 import java.time.LocalDateTime;
 
-@Setter
 @Getter
+@Setter
 @Entity
 @Table(name = "inventorybatches")
 public class InventoryBatch {
@@ -29,6 +29,9 @@ public class InventoryBatch {
 
     @Column(name = "quantity", nullable = false)
     private Integer quantity;
+
+    @Column(name = "remainingquantity", nullable = false)
+    private Integer remainingQuantity;
 
     @Column(name = "status")
     private String status = "Good";
