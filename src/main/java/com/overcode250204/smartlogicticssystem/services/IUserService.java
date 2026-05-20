@@ -9,4 +9,5 @@ import java.util.Optional;
 
 public interface IUserService extends BaseService<UserDTO, Long> {
     List<UserDTO> getAllUserDTO();
+    List<UserDTO> searchWithConditions(String keyword, Integer roleId, Boolean isActive);
 }

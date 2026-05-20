@@ -38,15 +38,17 @@ public class AuthService extends BaseServiceImpl implements IAuthService {
     public UserDTO registerDriver(UserDTO userDTO) {
         Role driverRole = findByIdOrThrow(roleRepository, userDTO.getRoleId(), RoleErrorCode.ERROR_DRIVER_ROLE);
         User driverUser = new User();
-        driverUser.setPhone(userDTO.getFullName());
+        driverUser.setFullName(userDTO.getFullName());
         driverUser.setPhone(userDTO.getPhone());
         if (userDTO.getEmail() != null && !userDTO.getEmail().isEmpty()) {
             driverUser.setEmail(userDTO.getEmail());
         } else {
-            String generatedEmail = userDTO.getFullName() + userDTO.getPhone() + "@driver.com";
+            String generatedEmail = userDTO.getPhone() + "@driver.com";
             driverUser.setEmail(generatedEmail);
         }
-
+        driverUser.setIdentificationNumber(userDTO.getIdentificationNumber());
+        driverUser.setAddress(userDTO.getAddress());
+        driverUser.setOrigin(userDTO.getOrigin());
         driverUser.setPasswordHash(userDTO.getPassword());
         driverUser.setRole(driverRole);
         driverUser.setIsActive(Boolean.FALSE); //Waiting for Admin permit

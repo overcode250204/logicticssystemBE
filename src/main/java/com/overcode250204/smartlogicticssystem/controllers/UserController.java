@@ -4,13 +4,11 @@ import com.overcode250204.smartlogicticssystem.base.BaseCrudController;
 import com.overcode250204.smartlogicticssystem.base.BaseResponse;
 import com.overcode250204.smartlogicticssystem.base.BaseService;
 import com.overcode250204.smartlogicticssystem.dtos.UserDTO;
+import com.overcode250204.smartlogicticssystem.entities.User;
 import com.overcode250204.smartlogicticssystem.services.IUserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -29,6 +27,15 @@ public class UserController extends BaseCrudController<UserDTO, Long> {
     public ResponseEntity<BaseResponse<List<UserDTO>>> getAllUser() {
         List<UserDTO> response = userService.getAllUserDTO();
         return success(response, "Get All User Success");
+    }
+
+    @GetMapping("/search")
+    public ResponseEntity<BaseResponse<List<UserDTO>>> searchUsers(
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) Integer roleId,
+            @RequestParam(required = false) Boolean isActive) {
+        List<UserDTO> response = userService.searchWithConditions(keyword, roleId, isActive);
+        return success(response, "Search successful");
     }
 
 
