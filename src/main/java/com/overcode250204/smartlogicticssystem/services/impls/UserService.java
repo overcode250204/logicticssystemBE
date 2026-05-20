@@ -31,6 +31,13 @@ public class UserService extends BaseServiceImpl implements IUserService {
     }
 
     @Override
+    public List<UserDTO> searchWithConditions(String keyword, Integer roleId, Boolean isActive) {
+        return userRepository.searchWithConditions(keyword, roleId, isActive).stream().map(userMapper::toDTO).collect(Collectors.toList());
+    }
+
+
+
+    @Override
     public UserDTO create(UserDTO dto, int roleId, int userId) {
         Role role = findByIdOrThrow(roleRepository, roleId, RoleErrorCode.ROLE_ID_NOT_FOUND);
         if (roleId != 1) {

@@ -18,6 +18,8 @@ public class User {
     @JoinColumn(name = "roleid", nullable = false)
     private Role role;
 
+    @Column(name = "identificationnumber")
+    private String identificationNumber;
 
     @Column(name = "fullname", nullable = false, length = 100)
     private String fullName;
@@ -30,6 +32,12 @@ public class User {
 
     @Column(name = "phone", length = 20)
     private String phone;
+
+    @Column(name = "address")
+    private String address;
+
+    @Column(name = "origin")
+    private String origin;
 
     @Column(name = "isactive")
     private Boolean isActive = true;
