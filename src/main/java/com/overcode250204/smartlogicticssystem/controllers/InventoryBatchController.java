@@ -1,10 +1,9 @@
 package com.overcode250204.smartlogicticssystem.controllers;
 
-import com.overcode250204.smartlogicticssystem.base.BaseController;
+import com.overcode250204.smartlogicticssystem.base.BaseCrudController;
 import com.overcode250204.smartlogicticssystem.base.BaseResponse;
 import com.overcode250204.smartlogicticssystem.dtos.InventoryBatchDTO;
 import com.overcode250204.smartlogicticssystem.services.IInventoryBatchService;
-import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -12,14 +11,13 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/inventory-batches")
-@RequiredArgsConstructor
-public class InventoryBatchController extends BaseController {
+public class InventoryBatchController extends BaseCrudController<InventoryBatchDTO, Long> {
 
     private final IInventoryBatchService batchService;
 
-    @PostMapping
-    public ResponseEntity<BaseResponse<InventoryBatchDTO>> createBatch(@RequestBody InventoryBatchDTO dto) {
-        return success(batchService.createBatch(dto), "Inventory batch created successfully");
+    public InventoryBatchController(IInventoryBatchService batchService) {
+        super(batchService);
+        this.batchService = batchService;
     }
 
     @GetMapping

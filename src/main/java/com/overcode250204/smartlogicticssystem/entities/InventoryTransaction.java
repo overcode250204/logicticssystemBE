@@ -20,8 +20,8 @@ public class InventoryTransaction {
     private Long transactionId;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "productid", nullable = false)
-    private Product product;
+    @JoinColumn(name = "batchid", nullable = false)
+    private InventoryBatch batch;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "type", nullable = false)
