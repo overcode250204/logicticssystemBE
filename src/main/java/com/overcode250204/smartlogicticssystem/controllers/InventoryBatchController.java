@@ -3,6 +3,8 @@ package com.overcode250204.smartlogicticssystem.controllers;
 import com.overcode250204.smartlogicticssystem.base.BaseCrudController;
 import com.overcode250204.smartlogicticssystem.base.BaseResponse;
 import com.overcode250204.smartlogicticssystem.dtos.InventoryBatchDTO;
+import com.overcode250204.smartlogicticssystem.dtos.request.ExportStockRequest;
+import com.overcode250204.smartlogicticssystem.dtos.response.ExportStockResponse;
 import com.overcode250204.smartlogicticssystem.services.IInventoryBatchService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -33,5 +35,10 @@ public class InventoryBatchController extends BaseCrudController<InventoryBatchD
     @GetMapping("/search/supplier")
     public ResponseEntity<BaseResponse<List<InventoryBatchDTO>>> getBatchesBySupplierName(@RequestParam String name) {
         return success(batchService.getBatchesBySupplierName(name), "Inventory batches retrieved by supplier name");
+    }
+
+    @PostMapping("/export")
+    public ResponseEntity<BaseResponse<ExportStockResponse>> exportStock(@RequestBody ExportStockRequest request) {
+        return success(batchService.exportStock(request), "Stock exported successfully");
     }
 }

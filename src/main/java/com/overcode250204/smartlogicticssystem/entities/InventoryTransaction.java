@@ -1,6 +1,5 @@
 package com.overcode250204.smartlogicticssystem.entities;
 
-import com.overcode250204.smartlogicticssystem.enums.InventoryStrategy;
 import com.overcode250204.smartlogicticssystem.enums.InventoryTransactionType;
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -27,9 +26,6 @@ public class InventoryTransaction {
     @Column(name = "type", nullable = false)
     private InventoryTransactionType type;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "strategy")
-    private InventoryStrategy strategy;
 
     @Column(name = "quantity", nullable = false)
     private Integer quantity;

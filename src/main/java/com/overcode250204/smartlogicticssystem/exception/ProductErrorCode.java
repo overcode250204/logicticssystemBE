@@ -6,7 +6,8 @@ import org.springframework.http.HttpStatus;
 @Getter
 public enum ProductErrorCode implements IErrorCode {
     PRODUCT_NOT_FOUND(HttpStatus.NOT_FOUND, "Product not found"),
-    ;
+    INVALID_QUANTITY(HttpStatus.BAD_REQUEST, "Quantity must be greater than 0"),
+    NOT_ENOUGH_STOCK(HttpStatus.BAD_REQUEST, "Not enough stock");    ;
 
     private final String message;
     private final HttpStatus httpStatus;

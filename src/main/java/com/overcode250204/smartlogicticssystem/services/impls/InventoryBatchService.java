@@ -2,8 +2,11 @@ package com.overcode250204.smartlogicticssystem.services.impls;
 
 import com.overcode250204.smartlogicticssystem.base.BaseServiceImpl;
 import com.overcode250204.smartlogicticssystem.dtos.InventoryBatchDTO;
+import com.overcode250204.smartlogicticssystem.dtos.request.ExportStockRequest;
+import com.overcode250204.smartlogicticssystem.dtos.response.ExportStockResponse;
 import com.overcode250204.smartlogicticssystem.entities.InventoryBatch;
 import com.overcode250204.smartlogicticssystem.entities.Product;
+import com.overcode250204.smartlogicticssystem.exception.AppException;
 import com.overcode250204.smartlogicticssystem.exception.ProductErrorCode;
 import com.overcode250204.smartlogicticssystem.mapper.InventoryBatchMapper;
 import com.overcode250204.smartlogicticssystem.dtos.InventoryTransactionDTO;
@@ -14,9 +17,11 @@ import com.overcode250204.smartlogicticssystem.repositories.ProductRepository;
 import com.overcode250204.smartlogicticssystem.services.IInventoryBatchService;
 import com.overcode250204.smartlogicticssystem.services.IInventoryTransactionService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -28,6 +33,60 @@ public class InventoryBatchService extends BaseServiceImpl implements IInventory
     private final ProductRepository productRepository;
     private final InventoryBatchMapper batchMapper;
     private final IInventoryTransactionService transactionService;
+
+    @Override
+    @Transactional
+    public ExportStockResponse exportStock(ExportStockRequest request) {
+        Product product = findByIdOrThrow(productRepository, request.getProductId(),
+                ProductErrorCode.PRODUCT_NOT_FOUND);
+
+        if (request.getQuantity() == null || request.getQuantity() <= 0) {
+            throw new AppException(ProductErrorCode.INVALID_QUANTITY);
+        }
+
+        Sort sort = Sort.by(Sort.Direction.ASC, "importDate");
+        List<InventoryBatch> batches = batchRepository.findByProduct_ProductIdAndRemainingQuantityGreaterThan(
+                request.getProductId(), 0, sort);
+
+        int totalAvailable = batches.stream()
+                .mapToInt(InventoryBatch::getRemainingQuantity)
+                .sum();
+
+        if (totalAvailable < request.getQuantity()) {
+            throw new AppException(ProductErrorCode.NOT_ENOUGH_STOCK);
+        }
+
+        int remainingToExport = request.getQuantity();
+        List<InventoryBatchDTO> affectedBatches = new ArrayList<>();
+
+        for (InventoryBatch batch : batches) {
+            if (remainingToExport <= 0)
+                break;
+
+            int exportQuantity = Math.min(batch.getRemainingQuantity(), remainingToExport);
+            batch.setRemainingQuantity(batch.getRemainingQuantity() - exportQuantity);
+            batchRepository.save(batch);
+
+            // Log transaction
+            InventoryTransactionDTO transactionDTO = new InventoryTransactionDTO();
+            transactionDTO.setBatchId(batch.getBatchId());
+            transactionDTO.setType(InventoryTransactionType.EXPORT);
+            transactionDTO.setQuantity(exportQuantity);
+            transactionService.create(transactionDTO, 0, 0);
+
+            affectedBatches.add(batchMapper.toDTO(batch));
+            remainingToExport -= exportQuantity;
+        }
+
+        return ExportStockResponse.builder()
+                .productId(product.getProductId())
+                .productName(product.getProductName())
+                .requestedQuantity(request.getQuantity())
+                .exportedQuantity(request.getQuantity())
+                .remainingStock(totalAvailable - request.getQuantity())
+                .batches(affectedBatches)
+                .build();
+    }
 
     @Override
     public List<InventoryBatchDTO> getAllBatches() {

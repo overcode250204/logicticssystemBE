@@ -40,7 +40,6 @@ public class InventoryTransactionService extends BaseServiceImpl implements IInv
 
         transaction.setQuantity(dto.getQuantity());
         transaction.setType(dto.getType());
-        transaction.setStrategy(dto.getStrategy());
 
         InventoryBatch batch = findByIdOrThrow(batchRepository, dto.getBatchId(), InventoryErrorCode.BATCH_NOT_FOUND);
         transaction.setBatch(batch);
