@@ -6,8 +6,8 @@ spring:
       enabled: true
   datasource:
     url: jdbc:postgresql://localhost:5432/smart_logistics
-    username: admin
-    password: HelloYoutube
+    username: postgres
+    password: root
     driver-class-name: org.postgresql.Driver
 
   jpa:

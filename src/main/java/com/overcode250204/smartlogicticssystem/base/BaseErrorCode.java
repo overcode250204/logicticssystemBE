@@ -1,8 +1,8 @@
-package com.overcode250204.smartlogicticssystem.exception;
+package com.overcode250204.smartlogicticssystem.base;
 
 import org.springframework.http.HttpStatus;
 
-public interface IErrorCode {
+public interface BaseErrorCode {
     default int getCode() {
         return getHttpStatus().value();
     }
