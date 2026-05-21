@@ -8,8 +8,8 @@ import org.springframework.http.HttpStatus;
 public enum RoleErrorCode implements BaseErrorCode {
     ROLE_NAME_NOT_FOUND(HttpStatus.NOT_FOUND, Messages.ROLE_NAME_NOT_FOUND),
     ROLE_ID_NOT_FOUND(HttpStatus.NOT_FOUND, Messages.ROLE_ID_NOT_FOUND),
-    ROLE_HAS_NO_PERMISSION(HttpStatus.FORBIDDEN, Messages.ROLE_HAS_NO_PERMISSION);
-
+    ROLE_HAS_NO_PERMISSION(HttpStatus.FORBIDDEN, Messages.ROLE_HAS_NO_PERMISSION),
+    ERROR_DRIVER_ROLE(HttpStatus.BAD_REQUEST, Messages.ERROR_DRIVER_ROLE);
     private final String message;
     private final HttpStatus httpStatus;
 
@@ -22,5 +22,6 @@ public enum RoleErrorCode implements BaseErrorCode {
         public static final String ROLE_NAME_NOT_FOUND = "Role name not found";
         public static final String ROLE_ID_NOT_FOUND = "Role id not found";
         public static final String ROLE_HAS_NO_PERMISSION = "Role has no permission";
+        public static final String ERROR_DRIVER_ROLE = "Driver role is invalid";
     }
 }
