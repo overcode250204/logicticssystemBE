@@ -1,10 +1,11 @@
 package com.overcode250204.smartlogicticssystem.exception;
 
+import com.overcode250204.smartlogicticssystem.base.BaseErrorCode;
 import lombok.Getter;
 import org.springframework.http.HttpStatus;
 
 @Getter
-public enum AuthErrorCode implements IErrorCode {
+public enum AuthErrorCode implements BaseErrorCode {
     UNAUTHENTICATED(HttpStatus.UNAUTHORIZED, Messages.UNAUTHENTICATED),
     UNAUTHORIZED(HttpStatus.FORBIDDEN, Messages.UNAUTHORIZED);
 

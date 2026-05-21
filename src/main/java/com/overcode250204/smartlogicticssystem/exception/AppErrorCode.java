@@ -1,10 +1,11 @@
 package com.overcode250204.smartlogicticssystem.exception;
 
+import com.overcode250204.smartlogicticssystem.base.BaseErrorCode;
 import lombok.Getter;
 import org.springframework.http.HttpStatus;
 
 @Getter
-public enum AppErrorCode implements IErrorCode {
+public enum AppErrorCode implements BaseErrorCode {
     UNCATEGORIZED_EXCEPTION(HttpStatus.INTERNAL_SERVER_ERROR, Messages.UNCATEGORIZED_EXCEPTION),
     INVALID_KEY(HttpStatus.BAD_REQUEST, Messages.INVALID_KEY);
 

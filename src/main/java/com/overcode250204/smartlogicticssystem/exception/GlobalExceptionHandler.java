@@ -1,6 +1,7 @@
 package com.overcode250204.smartlogicticssystem.exception;
 
 import com.overcode250204.smartlogicticssystem.base.BaseResponse;
+import com.overcode250204.smartlogicticssystem.base.BaseErrorCode;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -12,7 +13,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(AppException.class)
     public ResponseEntity<BaseResponse<Void>> handleAppException(AppException e) {
-        IErrorCode errorCode = e.getErrorCode();
+        BaseErrorCode errorCode = e.getErrorCode();
         return ResponseEntity.status(errorCode.getHttpStatus())
                 .body(BaseResponse.error(errorCode.getCode(), errorCode.getMessage()));
     }

@@ -1,10 +1,11 @@
 package com.overcode250204.smartlogicticssystem.exception;
 
+import com.overcode250204.smartlogicticssystem.base.BaseErrorCode;
 import lombok.Getter;
 import org.springframework.http.HttpStatus;
 
 @Getter
-public enum RoleErrorCode implements IErrorCode {
+public enum RoleErrorCode implements BaseErrorCode {
     ROLE_NAME_NOT_FOUND(HttpStatus.NOT_FOUND, Messages.ROLE_NAME_NOT_FOUND),
     ROLE_ID_NOT_FOUND(HttpStatus.NOT_FOUND, Messages.ROLE_ID_NOT_FOUND),
     ROLE_HAS_NO_PERMISSION(HttpStatus.FORBIDDEN, Messages.ROLE_HAS_NO_PERMISSION);

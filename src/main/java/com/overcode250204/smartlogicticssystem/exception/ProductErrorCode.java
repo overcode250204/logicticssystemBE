@@ -1,10 +1,11 @@
 package com.overcode250204.smartlogicticssystem.exception;
 
+import com.overcode250204.smartlogicticssystem.base.BaseErrorCode;
 import lombok.Getter;
 import org.springframework.http.HttpStatus;
 
 @Getter
-public enum ProductErrorCode implements IErrorCode {
+public enum ProductErrorCode implements BaseErrorCode {
     PRODUCT_NOT_FOUND(HttpStatus.NOT_FOUND, Messages.PRODUCT_NOT_FOUND),
     INVALID_QUANTITY(HttpStatus.BAD_REQUEST, Messages.INVALID_QUANTITY),
     NOT_ENOUGH_STOCK(HttpStatus.BAD_REQUEST, Messages.NOT_ENOUGH_STOCK),

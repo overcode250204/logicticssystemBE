@@ -1,10 +1,11 @@
 package com.overcode250204.smartlogicticssystem.exception;
 
+import com.overcode250204.smartlogicticssystem.base.BaseErrorCode;
 import lombok.Getter;
 import org.springframework.http.HttpStatus;
 
 @Getter
-public enum UserErrorCode implements IErrorCode {
+public enum UserErrorCode implements BaseErrorCode {
     USER_NOT_FOUND(HttpStatus.NOT_FOUND, Messages.USER_NOT_FOUND),
     USER_EXISTED(HttpStatus.BAD_REQUEST, Messages.USER_EXISTED),
     USERNAME_INVALID(HttpStatus.BAD_REQUEST, Messages.USERNAME_INVALID),
