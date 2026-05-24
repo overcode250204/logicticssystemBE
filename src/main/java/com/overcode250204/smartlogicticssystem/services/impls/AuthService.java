@@ -4,16 +4,20 @@ import com.overcode250204.smartlogicticssystem.base.BaseServiceImpl;
 import com.overcode250204.smartlogicticssystem.dtos.UserDTO;
 import com.overcode250204.smartlogicticssystem.entities.Role;
 import com.overcode250204.smartlogicticssystem.entities.User;
+import com.overcode250204.smartlogicticssystem.exception.AppException;
 import com.overcode250204.smartlogicticssystem.exception.RoleErrorCode;
+import com.overcode250204.smartlogicticssystem.exception.UserErrorCode;
 import com.overcode250204.smartlogicticssystem.mapper.UserMapper;
 import com.overcode250204.smartlogicticssystem.repositories.RoleRepository;
 import com.overcode250204.smartlogicticssystem.repositories.UserRepository;
 import com.overcode250204.smartlogicticssystem.services.IAuthService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.Optional;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class AuthService extends BaseServiceImpl implements IAuthService {
@@ -27,7 +31,10 @@ public class AuthService extends BaseServiceImpl implements IAuthService {
         Optional<User> user = userRepository.findByEmail(email);
         if (user.isPresent()) {
             User u = user.get();
-            if (u.getPasswordHash().equals(password) && Boolean.TRUE.equals(u.getIsActive())) {
+            if(! Boolean.TRUE.equals(u.getIsActive())) {
+                throw new AppException(UserErrorCode.USER_IS_INACTIVE);
+            }
+            if (u.getPasswordHash().equals(password)) {
                 return userMapper.toDTO(u);
             }
         }

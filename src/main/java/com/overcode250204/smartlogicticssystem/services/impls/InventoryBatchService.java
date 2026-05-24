@@ -2,8 +2,7 @@ package com.overcode250204.smartlogicticssystem.services.impls;
 
 import com.overcode250204.smartlogicticssystem.base.BaseServiceImpl;
 import com.overcode250204.smartlogicticssystem.dtos.InventoryBatchDTO;
-import com.overcode250204.smartlogicticssystem.dtos.request.ExportStockRequest;
-import com.overcode250204.smartlogicticssystem.dtos.response.ExportStockResponse;
+import com.overcode250204.smartlogicticssystem.dtos.InventoryDTO;
 import com.overcode250204.smartlogicticssystem.entities.InventoryBatch;
 import com.overcode250204.smartlogicticssystem.entities.Product;
 import com.overcode250204.smartlogicticssystem.exception.AppException;
@@ -14,6 +13,7 @@ import com.overcode250204.smartlogicticssystem.enums.InventoryTransactionType;
 import com.overcode250204.smartlogicticssystem.exception.InventoryErrorCode;
 import com.overcode250204.smartlogicticssystem.repositories.InventoryBatchRepository;
 import com.overcode250204.smartlogicticssystem.repositories.ProductRepository;
+
 import com.overcode250204.smartlogicticssystem.services.IInventoryBatchService;
 import com.overcode250204.smartlogicticssystem.services.IInventoryTransactionService;
 import lombok.RequiredArgsConstructor;
@@ -36,7 +36,7 @@ public class InventoryBatchService extends BaseServiceImpl implements IInventory
 
     @Override
     @Transactional
-    public ExportStockResponse exportStock(ExportStockRequest request) {
+    public InventoryBatchDTO exportStock(InventoryBatchDTO request) {
         Product product = findByIdOrThrow(productRepository, request.getProductId(),
                 ProductErrorCode.PRODUCT_NOT_FOUND);
 
@@ -57,7 +57,7 @@ public class InventoryBatchService extends BaseServiceImpl implements IInventory
         }
 
         int remainingToExport = request.getQuantity();
-        List<InventoryBatchDTO> affectedBatches = new ArrayList<>();
+        List<InventoryDTO> affectedBatches = new ArrayList<>();
 
         for (InventoryBatch batch : batches) {
             if (remainingToExport <= 0)
@@ -67,24 +67,26 @@ public class InventoryBatchService extends BaseServiceImpl implements IInventory
             batch.setRemainingQuantity(batch.getRemainingQuantity() - exportQuantity);
             batchRepository.save(batch);
 
-            // Log transaction
-            InventoryTransactionDTO transactionDTO = new InventoryTransactionDTO();
-            transactionDTO.setBatchId(batch.getBatchId());
-            transactionDTO.setType(InventoryTransactionType.EXPORT);
-            transactionDTO.setQuantity(exportQuantity);
-            transactionService.create(transactionDTO, 0, 0);
+            try{
+                InventoryTransactionDTO transactionDTO = new InventoryTransactionDTO();
+                transactionDTO.setBatchId(batch.getBatchId());
+                transactionDTO.setType(InventoryTransactionType.EXPORT);
+                transactionDTO.setQuantity(exportQuantity);
+                transactionService.create(transactionDTO, 0, 0);
+            } catch (Exception e) {
+                throw new AppException(InventoryErrorCode.TRANSACTION_RECORD_FAILED);
+            }
 
-            affectedBatches.add(batchMapper.toDTO(batch));
+            affectedBatches.add(batchMapper.toInventoryDTO(batch));
             remainingToExport -= exportQuantity;
         }
 
-        return ExportStockResponse.builder()
+        return InventoryBatchDTO.builder()
                 .productId(product.getProductId())
                 .productName(product.getProductName())
                 .requestedQuantity(request.getQuantity())
                 .exportedQuantity(request.getQuantity())
-                .remainingStock(totalAvailable - request.getQuantity())
-                .batches(affectedBatches)
+                .remainingQuantity(totalAvailable - request.getQuantity())
                 .build();
     }
 
@@ -92,6 +94,14 @@ public class InventoryBatchService extends BaseServiceImpl implements IInventory
     public List<InventoryBatchDTO> getAllBatches() {
         return batchRepository.findAll().stream()
                 .map(batchMapper::toDTO)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<InventoryDTO> getAllBatchResponses() {
+        return batchRepository.findAll().stream()
+                .map(batchMapper::toInventoryDTO)
                 .collect(Collectors.toList());
     }
 

@@ -1,10 +1,16 @@
 package com.overcode250204.smartlogicticssystem.services.impls;
 
 import com.overcode250204.smartlogicticssystem.base.BaseServiceImpl;
+import com.overcode250204.smartlogicticssystem.dtos.InventoryBatchDTO;
 import com.overcode250204.smartlogicticssystem.dtos.InventoryTransactionDTO;
+import com.overcode250204.smartlogicticssystem.dtos.InventoryDTO;
 import com.overcode250204.smartlogicticssystem.entities.InventoryTransaction;
 import com.overcode250204.smartlogicticssystem.entities.InventoryBatch;
+import com.overcode250204.smartlogicticssystem.enums.InventoryTransactionType;
+import com.overcode250204.smartlogicticssystem.exception.AppException;
 import com.overcode250204.smartlogicticssystem.exception.InventoryErrorCode;
+import com.overcode250204.smartlogicticssystem.exception.ProductErrorCode;
+
 import com.overcode250204.smartlogicticssystem.mapper.InventoryTransactionMapper;
 import com.overcode250204.smartlogicticssystem.repositories.InventoryBatchRepository;
 import com.overcode250204.smartlogicticssystem.repositories.InventoryTransactionRepository;
@@ -12,6 +18,7 @@ import com.overcode250204.smartlogicticssystem.services.IInventoryTransactionSer
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -20,6 +27,7 @@ public class InventoryTransactionService extends BaseServiceImpl implements IInv
     private final InventoryTransactionRepository transactionRepository;
     private final InventoryBatchRepository batchRepository;
     private final InventoryTransactionMapper transactionMapper;
+
 
     @Override
     @Transactional
@@ -61,4 +69,21 @@ public class InventoryTransactionService extends BaseServiceImpl implements IInv
                 InventoryErrorCode.TRANSACTION_NOT_FOUND);
         transactionRepository.delete(transaction);
     }
+
+    @Override
+    public List<InventoryTransactionDTO> getAllTransactions() {
+        return transactionRepository.findAll().stream()
+                .map(transactionMapper::toDTO)
+                .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<InventoryDTO> getAllTransactionResponses() {
+        return transactionRepository.findAll().stream()
+                .map(transactionMapper::toInventoryDTO)
+                .toList();
+    }
+
 }
+

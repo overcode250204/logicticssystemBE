@@ -10,7 +10,8 @@ public enum UserErrorCode implements BaseErrorCode {
     USER_EXISTED(HttpStatus.BAD_REQUEST, Messages.USER_EXISTED),
     USERNAME_INVALID(HttpStatus.BAD_REQUEST, Messages.USERNAME_INVALID),
     INVALID_PASSWORD(HttpStatus.BAD_REQUEST, Messages.INVALID_PASSWORD),
-    INVALID_DOB(HttpStatus.BAD_REQUEST, Messages.INVALID_DOB);
+    INVALID_DOB(HttpStatus.BAD_REQUEST, Messages.INVALID_DOB),
+    USER_IS_INACTIVE(HttpStatus.BAD_REQUEST, Messages.USER_IS_INACTIVE);
 
     private final String message;
     private final HttpStatus httpStatus;
@@ -26,5 +27,6 @@ public enum UserErrorCode implements BaseErrorCode {
         public static final String USERNAME_INVALID = "Username must be at least 3 characters";
         public static final String INVALID_PASSWORD = "Password must be at least 8 characters";
         public static final String INVALID_DOB = "Your age must be at least {min}";
+        public static final String USER_IS_INACTIVE = "User is inactive";
     }
 }

@@ -2,6 +2,7 @@ package com.overcode250204.smartlogicticssystem.services.impls;
 
 import com.overcode250204.smartlogicticssystem.base.BaseServiceImpl;
 import com.overcode250204.smartlogicticssystem.dtos.ProductDTO;
+import com.overcode250204.smartlogicticssystem.dtos.InventoryDTO;
 import com.overcode250204.smartlogicticssystem.entities.Product;
 import com.overcode250204.smartlogicticssystem.entities.Supplier;
 import com.overcode250204.smartlogicticssystem.exception.AppException;
@@ -30,6 +31,14 @@ public class ProductService extends BaseServiceImpl implements IProductService {
     public List<ProductDTO> getAllProducts() {
         return productRepository.findAll().stream()
                 .map(productMapper::toDTO)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<InventoryDTO> getAllProductResponses() {
+        return productRepository.findAll().stream()
+                .map(productMapper::toInventoryDTO)
                 .collect(Collectors.toList());
     }
 
