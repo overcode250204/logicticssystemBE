@@ -26,4 +26,6 @@ public interface InventoryBatchRepository extends JpaRepository<InventoryBatch, 
 
     List<InventoryBatch> findByProductProductNameContainingIgnoreCase(String productName);
     List<InventoryBatch> findByProductSupplierSupplierNameContainingIgnoreCase(String supplierName);
+
+    long countByStatus(String status);
 }
