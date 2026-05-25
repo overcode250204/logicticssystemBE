@@ -1,15 +1,12 @@
 package com.overcode250204.smartlogicticssystem.services.impls;
 
 import com.overcode250204.smartlogicticssystem.base.BaseServiceImpl;
-import com.overcode250204.smartlogicticssystem.dtos.InventoryBatchDTO;
-import com.overcode250204.smartlogicticssystem.dtos.InventoryTransactionDTO;
-import com.overcode250204.smartlogicticssystem.dtos.InventoryDTO;
+import com.overcode250204.smartlogicticssystem.dtos.request.InventoryTransactionCreateRequest;
+import com.overcode250204.smartlogicticssystem.dtos.request.InventoryTransactionUpdateRequest;
+import com.overcode250204.smartlogicticssystem.dtos.response.InventoryTransactionResponseDTO;
 import com.overcode250204.smartlogicticssystem.entities.InventoryTransaction;
 import com.overcode250204.smartlogicticssystem.entities.InventoryBatch;
-import com.overcode250204.smartlogicticssystem.enums.InventoryTransactionType;
-import com.overcode250204.smartlogicticssystem.exception.AppException;
 import com.overcode250204.smartlogicticssystem.exception.InventoryErrorCode;
-import com.overcode250204.smartlogicticssystem.exception.ProductErrorCode;
 
 import com.overcode250204.smartlogicticssystem.mapper.InventoryTransactionMapper;
 import com.overcode250204.smartlogicticssystem.repositories.InventoryBatchRepository;
@@ -31,35 +28,34 @@ public class InventoryTransactionService extends BaseServiceImpl implements IInv
 
     @Override
     @Transactional
-    public InventoryTransactionDTO create(InventoryTransactionDTO dto, int roleId, int userId) {
-        InventoryTransaction transaction = transactionMapper.toEntity(dto);
+    public InventoryTransactionResponseDTO create(InventoryTransactionCreateRequest request, int roleId, int userId) {
+        InventoryTransaction transaction = transactionMapper.toEntity(request);
 
-        InventoryBatch batch = findByIdOrThrow(batchRepository, dto.getBatchId(), InventoryErrorCode.BATCH_NOT_FOUND);
+        InventoryBatch batch = findByIdOrThrow(batchRepository, request.getBatchId(), InventoryErrorCode.BATCH_NOT_FOUND);
         transaction.setBatch(batch);
 
-        return transactionMapper.toDTO(transactionRepository.save(transaction));
+        return transactionMapper.toResponse(transactionRepository.save(transaction));
     }
 
     @Override
     @Transactional
-    public InventoryTransactionDTO update(Long id, InventoryTransactionDTO dto, int roleId, int userId) {
+    public InventoryTransactionResponseDTO update(Long id, InventoryTransactionUpdateRequest request, int roleId, int userId) {
         InventoryTransaction transaction = findByIdOrThrow(transactionRepository, id,
                 InventoryErrorCode.TRANSACTION_NOT_FOUND);
 
-        transaction.setQuantity(dto.getQuantity());
-        transaction.setType(dto.getType());
+        transactionMapper.updateEntity(request, transaction);
 
-        InventoryBatch batch = findByIdOrThrow(batchRepository, dto.getBatchId(), InventoryErrorCode.BATCH_NOT_FOUND);
+        InventoryBatch batch = findByIdOrThrow(batchRepository, request.getBatchId(), InventoryErrorCode.BATCH_NOT_FOUND);
         transaction.setBatch(batch);
 
-        return transactionMapper.toDTO(transactionRepository.save(transaction));
+        return transactionMapper.toResponse(transactionRepository.save(transaction));
     }
 
     @Override
-    public InventoryTransactionDTO getById(Long id, int roleId, int userId) {
+    public InventoryTransactionResponseDTO getById(Long id, int roleId, int userId) {
         InventoryTransaction transaction = findByIdOrThrow(transactionRepository, id,
                 InventoryErrorCode.TRANSACTION_NOT_FOUND);
-        return transactionMapper.toDTO(transaction);
+        return transactionMapper.toResponse(transaction);
     }
 
     @Override
@@ -71,19 +67,10 @@ public class InventoryTransactionService extends BaseServiceImpl implements IInv
     }
 
     @Override
-    public List<InventoryTransactionDTO> getAllTransactions() {
+    public List<InventoryTransactionResponseDTO> getAllTransactions() {
         return transactionRepository.findAll().stream()
-                .map(transactionMapper::toDTO)
-                .toList();
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<InventoryDTO> getAllTransactionResponses() {
-        return transactionRepository.findAll().stream()
-                .map(transactionMapper::toInventoryDTO)
+                .map(transactionMapper::toResponse)
                 .toList();
     }
 
 }
-

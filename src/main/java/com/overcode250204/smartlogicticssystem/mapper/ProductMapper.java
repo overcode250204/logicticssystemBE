@@ -1,78 +1,68 @@
 package com.overcode250204.smartlogicticssystem.mapper;
 
-import com.overcode250204.smartlogicticssystem.dtos.InventoryDTO;
-import com.overcode250204.smartlogicticssystem.dtos.ProductDTO;
+import com.overcode250204.smartlogicticssystem.dtos.request.ProductCreateRequest;
+import com.overcode250204.smartlogicticssystem.dtos.request.ProductUpdateRequest;
+import com.overcode250204.smartlogicticssystem.dtos.response.ProductResponseDTO;
 import com.overcode250204.smartlogicticssystem.entities.Product;
-import com.overcode250204.smartlogicticssystem.entities.Supplier;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 @Component
+@RequiredArgsConstructor
 public class ProductMapper {
 
-    public ProductDTO toDTO(Product product) {
+    private final SupplierMapper supplierMapper;
+
+    public ProductResponseDTO toResponse(Product product) {
         if (product == null) {
             return null;
         }
 
-        Supplier supplier = product.getSupplier();
-        return ProductDTO.builder()
+        return ProductResponseDTO.builder()
                 .productId(product.getProductId())
                 .productCode(product.getProductCode())
                 .productName(product.getProductName())
                 .price(product.getPrice())
                 .minStockLevel(product.getMinStockLevel())
-                .supplierId(supplier != null ? supplier.getSupplierId() : null)
-                .supplierName(supplier != null ? supplier.getSupplierName() : null)
+                .supplier(supplierMapper.toSimpleResponse(product.getSupplier()))
                 .build();
     }
 
-    public InventoryDTO toInventoryDTO(Product product) {
-        return toProductInventoryDTO(product);
+    public ProductResponseDTO toSimpleResponse(Product product) {
+        if (product == null) {
+            return null;
+        }
+
+        return ProductResponseDTO.builder()
+                .productId(product.getProductId())
+                .productCode(product.getProductCode())
+                .productName(product.getProductName())
+                .minStockLevel(product.getMinStockLevel())
+                .price(product.getPrice())
+                .build();
     }
 
-    public InventoryDTO toProductSummaryResponse(Product product) {
-        return toProductInventoryDTO(product);
-    }
-
-    public Product toEntity(ProductDTO dto) {
-        if (dto == null) {
+    public Product toEntity(ProductCreateRequest request) {
+        if (request == null) {
             return null;
         }
 
         Product product = new Product();
-        product.setProductId(dto.getProductId());
-        product.setProductCode(dto.getProductCode());
-        product.setProductName(dto.getProductName());
-        product.setMinStockLevel(dto.getMinStockLevel());
-        product.setPrice(dto.getPrice());
+        product.setProductCode(request.getProductCode());
+        product.setProductName(request.getProductName());
+        product.setMinStockLevel(request.getMinStockLevel());
+        product.setPrice(request.getPrice());
         return product;
     }
 
-    public void updateEntity(ProductDTO dto, Product entity) {
-        if (dto == null || entity == null) {
+    public void updateEntity(ProductUpdateRequest request, Product entity) {
+        if (request == null || entity == null) {
             return;
         }
 
-        entity.setProductCode(dto.getProductCode());
-        entity.setProductName(dto.getProductName());
-        entity.setMinStockLevel(dto.getMinStockLevel());
-        entity.setPrice(dto.getPrice());
-    }
-
-    private InventoryDTO toProductInventoryDTO(Product product) {
-        if (product == null) {
-            return null;
-        }
-
-        Supplier supplier = product.getSupplier();
-        return InventoryDTO.builder()
-                .productId(product.getProductId())
-                .productCode(product.getProductCode())
-                .productName(product.getProductName())
-                .minStockLevel(product.getMinStockLevel())
-                .price(product.getPrice())
-                .supplierId(supplier != null ? supplier.getSupplierId() : null)
-                .supplierName(supplier != null ? supplier.getSupplierName() : null)
-                .build();
+        entity.setProductCode(request.getProductCode());
+        entity.setProductName(request.getProductName());
+        entity.setMinStockLevel(request.getMinStockLevel());
+        entity.setPrice(request.getPrice());
     }
 }

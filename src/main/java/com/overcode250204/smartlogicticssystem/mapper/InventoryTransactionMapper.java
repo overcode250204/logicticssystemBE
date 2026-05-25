@@ -1,58 +1,55 @@
 package com.overcode250204.smartlogicticssystem.mapper;
 
-import com.overcode250204.smartlogicticssystem.dtos.InventoryDTO;
-import com.overcode250204.smartlogicticssystem.dtos.InventoryTransactionDTO;
+import com.overcode250204.smartlogicticssystem.dtos.request.InventoryTransactionCreateRequest;
+import com.overcode250204.smartlogicticssystem.dtos.request.InventoryTransactionUpdateRequest;
+import com.overcode250204.smartlogicticssystem.dtos.response.InventoryTransactionResponseDTO;
 import com.overcode250204.smartlogicticssystem.entities.InventoryBatch;
 import com.overcode250204.smartlogicticssystem.entities.InventoryTransaction;
 import com.overcode250204.smartlogicticssystem.entities.Product;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 @Component
+@RequiredArgsConstructor
 public class InventoryTransactionMapper {
 
-    public InventoryTransactionDTO toDTO(InventoryTransaction entity) {
-        if (entity == null) {
-            return null;
-        }
+    private final InventoryBatchMapper batchMapper;
+    private final ProductMapper productMapper;
 
-        InventoryBatch batch = entity.getBatch();
-        InventoryTransactionDTO dto = new InventoryTransactionDTO();
-        dto.setTransactionId(entity.getTransactionId());
-        dto.setBatchId(batch != null ? batch.getBatchId() : null);
-        dto.setType(entity.getType());
-        dto.setQuantity(entity.getQuantity());
-        dto.setCreatedAt(entity.getCreatedAt());
-        return dto;
-    }
-
-    public InventoryDTO toInventoryDTO(InventoryTransaction transaction) {
+    public InventoryTransactionResponseDTO toResponse(InventoryTransaction transaction) {
         if (transaction == null) {
             return null;
         }
 
         InventoryBatch batch = transaction.getBatch();
         Product product = batch != null ? batch.getProduct() : null;
-        return InventoryDTO.builder()
+        return InventoryTransactionResponseDTO.builder()
                 .transactionId(transaction.getTransactionId())
-                .batchId(batch != null ? batch.getBatchId() : null)
-                .productId(product != null ? product.getProductId() : null)
-                .productName(product != null ? product.getProductName() : null)
-                .type(transaction.getType() != null ? transaction.getType().name() : null)
+                .batch(batchMapper.toSimpleResponse(batch))
+                .product(productMapper.toSimpleResponse(product))
+                .type(transaction.getType())
                 .quantity(transaction.getQuantity())
                 .createdAt(transaction.getCreatedAt())
                 .build();
     }
 
-    public InventoryTransaction toEntity(InventoryTransactionDTO dto) {
-        if (dto == null) {
+    public InventoryTransaction toEntity(InventoryTransactionCreateRequest request) {
+        if (request == null) {
             return null;
         }
 
         InventoryTransaction transaction = new InventoryTransaction();
-        transaction.setTransactionId(dto.getTransactionId());
-        transaction.setType(dto.getType());
-        transaction.setQuantity(dto.getQuantity());
-        transaction.setCreatedAt(dto.getCreatedAt());
+        transaction.setType(request.getType());
+        transaction.setQuantity(request.getQuantity());
         return transaction;
+    }
+
+    public void updateEntity(InventoryTransactionUpdateRequest request, InventoryTransaction transaction) {
+        if (request == null || transaction == null) {
+            return;
+        }
+
+        transaction.setQuantity(request.getQuantity());
+        transaction.setType(request.getType());
     }
 }

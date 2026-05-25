@@ -1,14 +1,17 @@
 package com.overcode250204.smartlogicticssystem.services.impls;
 
 import com.overcode250204.smartlogicticssystem.base.BaseServiceImpl;
-import com.overcode250204.smartlogicticssystem.dtos.InventoryBatchDTO;
-import com.overcode250204.smartlogicticssystem.dtos.InventoryDTO;
+import com.overcode250204.smartlogicticssystem.dtos.request.InventoryBatchCreateRequest;
+import com.overcode250204.smartlogicticssystem.dtos.request.InventoryBatchUpdateRequest;
+import com.overcode250204.smartlogicticssystem.dtos.request.InventoryExportRequest;
+import com.overcode250204.smartlogicticssystem.dtos.request.InventoryTransactionCreateRequest;
+import com.overcode250204.smartlogicticssystem.dtos.response.InventoryBatchResponseDTO;
+import com.overcode250204.smartlogicticssystem.dtos.response.InventoryExportResponseDTO;
 import com.overcode250204.smartlogicticssystem.entities.InventoryBatch;
 import com.overcode250204.smartlogicticssystem.entities.Product;
 import com.overcode250204.smartlogicticssystem.exception.AppException;
 import com.overcode250204.smartlogicticssystem.exception.ProductErrorCode;
 import com.overcode250204.smartlogicticssystem.mapper.InventoryBatchMapper;
-import com.overcode250204.smartlogicticssystem.dtos.InventoryTransactionDTO;
 import com.overcode250204.smartlogicticssystem.enums.InventoryTransactionType;
 import com.overcode250204.smartlogicticssystem.exception.InventoryErrorCode;
 import com.overcode250204.smartlogicticssystem.repositories.InventoryBatchRepository;
@@ -21,7 +24,6 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -36,7 +38,7 @@ public class InventoryBatchService extends BaseServiceImpl implements IInventory
 
     @Override
     @Transactional
-    public InventoryBatchDTO exportStock(InventoryBatchDTO request) {
+    public InventoryExportResponseDTO exportStock(InventoryExportRequest request) {
         Product product = findByIdOrThrow(productRepository, request.getProductId(),
                 ProductErrorCode.PRODUCT_NOT_FOUND);
 
@@ -57,8 +59,6 @@ public class InventoryBatchService extends BaseServiceImpl implements IInventory
         }
 
         int remainingToExport = request.getQuantity();
-        List<InventoryDTO> affectedBatches = new ArrayList<>();
-
         for (InventoryBatch batch : batches) {
             if (remainingToExport <= 0)
                 break;
@@ -68,98 +68,79 @@ public class InventoryBatchService extends BaseServiceImpl implements IInventory
             batchRepository.save(batch);
 
             try{
-                InventoryTransactionDTO transactionDTO = new InventoryTransactionDTO();
-                transactionDTO.setBatchId(batch.getBatchId());
-                transactionDTO.setType(InventoryTransactionType.EXPORT);
-                transactionDTO.setQuantity(exportQuantity);
-                transactionService.create(transactionDTO, 0, 0);
+                InventoryTransactionCreateRequest transactionRequest = new InventoryTransactionCreateRequest();
+                transactionRequest.setBatchId(batch.getBatchId());
+                transactionRequest.setType(InventoryTransactionType.EXPORT);
+                transactionRequest.setQuantity(exportQuantity);
+                transactionService.create(transactionRequest, 0, 0);
             } catch (Exception e) {
                 throw new AppException(InventoryErrorCode.TRANSACTION_RECORD_FAILED);
             }
 
-            affectedBatches.add(batchMapper.toInventoryDTO(batch));
             remainingToExport -= exportQuantity;
         }
 
-        return InventoryBatchDTO.builder()
-                .productId(product.getProductId())
-                .productName(product.getProductName())
-                .requestedQuantity(request.getQuantity())
-                .exportedQuantity(request.getQuantity())
-                .remainingQuantity(totalAvailable - request.getQuantity())
-                .build();
+        return batchMapper.toExportResponse(product, request.getQuantity(), request.getQuantity(),
+                totalAvailable - request.getQuantity());
     }
 
     @Override
-    public List<InventoryBatchDTO> getAllBatches() {
+    public List<InventoryBatchResponseDTO> getAllBatches() {
         return batchRepository.findAll().stream()
-                .map(batchMapper::toDTO)
+                .map(batchMapper::toResponse)
                 .collect(Collectors.toList());
     }
 
     @Override
-    @Transactional(readOnly = true)
-    public List<InventoryDTO> getAllBatchResponses() {
-        return batchRepository.findAll().stream()
-                .map(batchMapper::toInventoryDTO)
-                .collect(Collectors.toList());
-    }
-
-    @Override
-    public List<InventoryBatchDTO> getBatchesByProductName(String productName) {
+    public List<InventoryBatchResponseDTO> getBatchesByProductName(String productName) {
         return batchRepository.findByProductProductNameContainingIgnoreCase(productName).stream()
-                .map(batchMapper::toDTO)
+                .map(batchMapper::toResponse)
                 .collect(Collectors.toList());
     }
 
     @Override
-    public List<InventoryBatchDTO> getBatchesBySupplierName(String supplierName) {
+    public List<InventoryBatchResponseDTO> getBatchesBySupplierName(String supplierName) {
         return batchRepository.findByProductSupplierSupplierNameContainingIgnoreCase(supplierName).stream()
-                .map(batchMapper::toDTO)
+                .map(batchMapper::toResponse)
                 .collect(Collectors.toList());
     }
 
     @Override
     @Transactional
-    public InventoryBatchDTO create(InventoryBatchDTO dto, int roleId, int userId) {
-        Product product = findByIdOrThrow(productRepository, dto.getProductId(), ProductErrorCode.PRODUCT_NOT_FOUND);
+    public InventoryBatchResponseDTO create(InventoryBatchCreateRequest request, int roleId, int userId) {
+        Product product = findByIdOrThrow(productRepository, request.getProductId(), ProductErrorCode.PRODUCT_NOT_FOUND);
 
-        InventoryBatch batch = batchMapper.toEntity(dto);
+        InventoryBatch batch = batchMapper.toEntity(request);
         batch.setProduct(product);
-        batch.setRemainingQuantity(dto.getQuantity());
 
-        InventoryBatchDTO savedBatch = batchMapper.toDTO(batchRepository.save(batch));
+        InventoryBatch savedBatch = batchRepository.save(batch);
 
-        // Log transaction
-        InventoryTransactionDTO transactionDTO = new InventoryTransactionDTO();
-        transactionDTO.setBatchId(savedBatch.getBatchId());
-        transactionDTO.setQuantity(savedBatch.getQuantity());
-        transactionDTO.setType(InventoryTransactionType.IMPORT);
+        InventoryTransactionCreateRequest transactionRequest = new InventoryTransactionCreateRequest();
+        transactionRequest.setBatchId(savedBatch.getBatchId());
+        transactionRequest.setQuantity(savedBatch.getQuantity());
+        transactionRequest.setType(InventoryTransactionType.IMPORT);
 
-        transactionService.create(transactionDTO, roleId, userId);
+        transactionService.create(transactionRequest, roleId, userId);
 
-        return savedBatch;
+        return batchMapper.toResponse(savedBatch);
     }
 
     @Override
     @Transactional
-    public InventoryBatchDTO update(Long id, InventoryBatchDTO dto, int roleId, int userId) {
+    public InventoryBatchResponseDTO update(Long id, InventoryBatchUpdateRequest request, int roleId, int userId) {
         InventoryBatch batch = findByIdOrThrow(batchRepository, id, InventoryErrorCode.BATCH_NOT_FOUND);
-        Product product = findByIdOrThrow(productRepository, dto.getProductId(), ProductErrorCode.PRODUCT_NOT_FOUND);
+        Product product = findByIdOrThrow(productRepository, request.getProductId(), ProductErrorCode.PRODUCT_NOT_FOUND);
 
         batch.setProduct(product);
-        batch.setQuantity(dto.getQuantity());
-        batch.setRemainingQuantity(dto.getRemainingQuantity());
-        batch.setExpirationDate(dto.getExpirationDate());
-        batch.setStatus(dto.getStatus());
+        batchMapper.updateEntity(request, batch);
 
-        return batchMapper.toDTO(batchRepository.save(batch));
+        return batchMapper.toResponse(batchRepository.save(batch));
     }
 
     @Override
-    public InventoryBatchDTO getById(Long id, int roleId, int userId) {
+    public InventoryBatchResponseDTO getById(Long id, int roleId, int userId) {
         InventoryBatch batch = findByIdOrThrow(batchRepository, id, InventoryErrorCode.BATCH_NOT_FOUND);
-        return batchMapper.toDTO(batch);
+        return batchMapper.toResponse(batch);
     }
 
     @Override

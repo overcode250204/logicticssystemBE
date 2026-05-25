@@ -1,15 +1,18 @@
 package com.overcode250204.smartlogicticssystem.services;
 
-import com.overcode250204.smartlogicticssystem.base.BaseService;
-import com.overcode250204.smartlogicticssystem.dtos.InventoryBatchDTO;
-import com.overcode250204.smartlogicticssystem.dtos.InventoryTransactionDTO;
-import com.overcode250204.smartlogicticssystem.dtos.InventoryDTO;
+import com.overcode250204.smartlogicticssystem.dtos.request.InventoryTransactionCreateRequest;
+import com.overcode250204.smartlogicticssystem.dtos.request.InventoryTransactionUpdateRequest;
+import com.overcode250204.smartlogicticssystem.dtos.response.InventoryTransactionResponseDTO;
 import java.util.List;
 
-public interface IInventoryTransactionService extends BaseService<InventoryTransactionDTO, Long> {
-    List<InventoryTransactionDTO> getAllTransactions();
+public interface IInventoryTransactionService {
+    InventoryTransactionResponseDTO create(InventoryTransactionCreateRequest request, int roleId, int userId);
 
-    List<InventoryDTO> getAllTransactionResponses();
+    InventoryTransactionResponseDTO update(Long id, InventoryTransactionUpdateRequest request, int roleId, int userId);
 
+    InventoryTransactionResponseDTO getById(Long id, int roleId, int userId);
+
+    void delete(Long id, int roleId, int userId);
+
+    List<InventoryTransactionResponseDTO> getAllTransactions();
 }
-

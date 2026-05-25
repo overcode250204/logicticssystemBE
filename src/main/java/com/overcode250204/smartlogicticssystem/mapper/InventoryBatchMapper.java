@@ -1,47 +1,34 @@
 package com.overcode250204.smartlogicticssystem.mapper;
 
-import com.overcode250204.smartlogicticssystem.dtos.InventoryBatchDTO;
-import com.overcode250204.smartlogicticssystem.dtos.InventoryDTO;
+import com.overcode250204.smartlogicticssystem.dtos.request.InventoryBatchCreateRequest;
+import com.overcode250204.smartlogicticssystem.dtos.request.InventoryBatchUpdateRequest;
+import com.overcode250204.smartlogicticssystem.dtos.response.InventoryBatchResponseDTO;
+import com.overcode250204.smartlogicticssystem.dtos.response.InventoryExportResponseDTO;
+import com.overcode250204.smartlogicticssystem.dtos.response.InventoryBatchSimpleResponseDTO;
 import com.overcode250204.smartlogicticssystem.entities.InventoryBatch;
 import com.overcode250204.smartlogicticssystem.entities.Product;
 import com.overcode250204.smartlogicticssystem.entities.Supplier;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 @Component
+@RequiredArgsConstructor
 public class InventoryBatchMapper {
 
-    public InventoryBatchDTO toDTO(InventoryBatch entity) {
-        if (entity == null) {
-            return null;
-        }
+    private final ProductMapper productMapper;
+    private final SupplierMapper supplierMapper;
 
-        Product product = entity.getProduct();
-        return InventoryBatchDTO.builder()
-                .batchId(entity.getBatchId())
-                .productId(product != null ? product.getProductId() : null)
-                .productName(product != null ? product.getProductName() : null)
-                .importDate(entity.getImportDate())
-                .expirationDate(entity.getExpirationDate())
-                .quantity(entity.getQuantity())
-                .remainingQuantity(entity.getRemainingQuantity())
-                .status(entity.getStatus())
-                .build();
-    }
-
-    public InventoryDTO toInventoryDTO(InventoryBatch batch) {
+    public InventoryBatchResponseDTO toResponse(InventoryBatch batch) {
         if (batch == null) {
             return null;
         }
 
         Product product = batch.getProduct();
         Supplier supplier = product != null ? product.getSupplier() : null;
-        return InventoryDTO.builder()
+        return InventoryBatchResponseDTO.builder()
                 .batchId(batch.getBatchId())
-                .productId(product != null ? product.getProductId() : null)
-                .productCode(product != null ? product.getProductCode() : null)
-                .productName(product != null ? product.getProductName() : null)
-                .supplierId(supplier != null ? supplier.getSupplierId() : null)
-                .supplierName(supplier != null ? supplier.getSupplierName() : null)
+                .product(productMapper.toSimpleResponse(product))
+                .supplier(supplierMapper.toSimpleResponse(supplier))
                 .importDate(batch.getImportDate())
                 .expirationDate(batch.getExpirationDate())
                 .quantity(batch.getQuantity())
@@ -50,18 +37,53 @@ public class InventoryBatchMapper {
                 .build();
     }
 
-    public InventoryBatch toEntity(InventoryBatchDTO dto) {
-        if (dto == null) {
+    public InventoryBatchSimpleResponseDTO toSimpleResponse(InventoryBatch batch) {
+        if (batch == null) {
+            return null;
+        }
+
+        return InventoryBatchSimpleResponseDTO.builder()
+                .batchId(batch.getBatchId())
+                .importDate(batch.getImportDate())
+                .expirationDate(batch.getExpirationDate())
+                .quantity(batch.getQuantity())
+                .remainingQuantity(batch.getRemainingQuantity())
+                .status(batch.getStatus())
+                .build();
+    }
+
+    public InventoryExportResponseDTO toExportResponse(Product product, int requestedQuantity, int exportedQuantity,
+            int remainingStock) {
+        return InventoryExportResponseDTO.builder()
+                .product(productMapper.toSimpleResponse(product))
+                .requestedQuantity(requestedQuantity)
+                .exportedQuantity(exportedQuantity)
+                .remainingStock(remainingStock)
+                .build();
+    }
+
+    public InventoryBatch toEntity(InventoryBatchCreateRequest request) {
+        if (request == null) {
             return null;
         }
 
         InventoryBatch batch = new InventoryBatch();
-        batch.setBatchId(dto.getBatchId());
-        batch.setImportDate(dto.getImportDate());
-        batch.setExpirationDate(dto.getExpirationDate());
-        batch.setQuantity(dto.getQuantity());
-        batch.setRemainingQuantity(dto.getRemainingQuantity());
-        batch.setStatus(dto.getStatus());
+        batch.setImportDate(request.getImportDate());
+        batch.setExpirationDate(request.getExpirationDate());
+        batch.setQuantity(request.getQuantity());
+        batch.setRemainingQuantity(request.getQuantity());
+        batch.setStatus(request.getStatus());
         return batch;
+    }
+
+    public void updateEntity(InventoryBatchUpdateRequest request, InventoryBatch batch) {
+        if (request == null || batch == null) {
+            return;
+        }
+
+        batch.setQuantity(request.getQuantity());
+        batch.setRemainingQuantity(request.getRemainingQuantity());
+        batch.setExpirationDate(request.getExpirationDate());
+        batch.setStatus(request.getStatus());
     }
 }

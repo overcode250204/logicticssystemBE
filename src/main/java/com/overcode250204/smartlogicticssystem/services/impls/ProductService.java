@@ -1,8 +1,9 @@
 package com.overcode250204.smartlogicticssystem.services.impls;
 
 import com.overcode250204.smartlogicticssystem.base.BaseServiceImpl;
-import com.overcode250204.smartlogicticssystem.dtos.ProductDTO;
-import com.overcode250204.smartlogicticssystem.dtos.InventoryDTO;
+import com.overcode250204.smartlogicticssystem.dtos.request.ProductCreateRequest;
+import com.overcode250204.smartlogicticssystem.dtos.request.ProductUpdateRequest;
+import com.overcode250204.smartlogicticssystem.dtos.response.ProductResponseDTO;
 import com.overcode250204.smartlogicticssystem.entities.Product;
 import com.overcode250204.smartlogicticssystem.entities.Supplier;
 import com.overcode250204.smartlogicticssystem.exception.AppException;
@@ -28,67 +29,58 @@ public class ProductService extends BaseServiceImpl implements IProductService {
     private final ProductMapper productMapper;
 
     @Override
-    public List<ProductDTO> getAllProducts() {
+    public List<ProductResponseDTO> getAllProducts() {
         return productRepository.findAll().stream()
-                .map(productMapper::toDTO)
+                .map(productMapper::toResponse)
                 .collect(Collectors.toList());
     }
 
     @Override
-    @Transactional(readOnly = true)
-    public List<InventoryDTO> getAllProductResponses() {
-        return productRepository.findAll().stream()
-                .map(productMapper::toInventoryDTO)
-                .collect(Collectors.toList());
-    }
-
-    @Override
-    public ProductDTO getByProductCode(String productCode) {
+    public ProductResponseDTO getByProductCode(String productCode) {
         Product product = productRepository.findByProductCode(productCode)
                 .orElseThrow(() -> new AppException(ProductErrorCode.PRODUCT_NOT_FOUND));
-        return productMapper.toDTO(product);
+        return productMapper.toResponse(product);
     }
 
     @Override
     @Transactional
-    public ProductDTO create(ProductDTO dto, int roleId, int userId) {
-        if (productRepository.existsByProductCode(dto.getProductCode())) {
+    public ProductResponseDTO create(ProductCreateRequest request, int roleId, int userId) {
+        if (productRepository.existsByProductCode(request.getProductCode())) {
             throw new AppException(ProductErrorCode.PRODUCT_ALREADY_EXISTS);
         }
 
-        Supplier supplier = findByIdOrThrow(supplierRepository, dto.getSupplierId(),
+        Supplier supplier = findByIdOrThrow(supplierRepository, request.getSupplierId(),
                 SupplierErrorCode.SUPPLIER_NOT_FOUND);
 
-        Product product = productMapper.toEntity(dto);
+        Product product = productMapper.toEntity(request);
         product.setSupplier(supplier);
 
-        return productMapper.toDTO(productRepository.save(product));
+        return productMapper.toResponse(productRepository.save(product));
     }
 
     @Override
     @Transactional
-    public ProductDTO update(Long id, ProductDTO dto, int roleId, int userId) {
+    public ProductResponseDTO update(Long id, ProductUpdateRequest request, int roleId, int userId) {
         Product product = findByIdOrThrow(productRepository, id, ProductErrorCode.PRODUCT_NOT_FOUND);
 
-        // Check if code is changed and if new code already exists
-        if (!product.getProductCode().equals(dto.getProductCode()) &&
-                productRepository.existsByProductCode(dto.getProductCode())) {
+        if (!product.getProductCode().equals(request.getProductCode()) &&
+                productRepository.existsByProductCode(request.getProductCode())) {
             throw new AppException(ProductErrorCode.PRODUCT_ALREADY_EXISTS);
         }
 
-        Supplier supplier = findByIdOrThrow(supplierRepository, dto.getSupplierId(),
+        Supplier supplier = findByIdOrThrow(supplierRepository, request.getSupplierId(),
                 SupplierErrorCode.SUPPLIER_NOT_FOUND);
 
-        productMapper.updateEntity(dto, product);
+        productMapper.updateEntity(request, product);
         product.setSupplier(supplier);
 
-        return productMapper.toDTO(productRepository.save(product));
+        return productMapper.toResponse(productRepository.save(product));
     }
 
     @Override
-    public ProductDTO getById(Long id, int roleId, int userId) {
+    public ProductResponseDTO getById(Long id, int roleId, int userId) {
         Product product = findByIdOrThrow(productRepository, id, ProductErrorCode.PRODUCT_NOT_FOUND);
-        return productMapper.toDTO(product);
+        return productMapper.toResponse(product);
     }
 
     @Override

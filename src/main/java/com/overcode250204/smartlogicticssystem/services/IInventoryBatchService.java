@@ -1,21 +1,27 @@
 package com.overcode250204.smartlogicticssystem.services;
 
-import com.overcode250204.smartlogicticssystem.base.BaseService;
-import com.overcode250204.smartlogicticssystem.dtos.InventoryBatchDTO;
-import com.overcode250204.smartlogicticssystem.dtos.InventoryDTO;
+import com.overcode250204.smartlogicticssystem.dtos.request.InventoryBatchCreateRequest;
+import com.overcode250204.smartlogicticssystem.dtos.request.InventoryBatchUpdateRequest;
+import com.overcode250204.smartlogicticssystem.dtos.request.InventoryExportRequest;
+import com.overcode250204.smartlogicticssystem.dtos.response.InventoryBatchResponseDTO;
+import com.overcode250204.smartlogicticssystem.dtos.response.InventoryExportResponseDTO;
 
 import java.util.List;
 
-public interface IInventoryBatchService extends BaseService<InventoryBatchDTO, Long> {
+public interface IInventoryBatchService {
+    InventoryBatchResponseDTO create(InventoryBatchCreateRequest request, int roleId, int userId);
 
-    InventoryBatchDTO exportStock(InventoryBatchDTO request);
+    InventoryBatchResponseDTO update(Long id, InventoryBatchUpdateRequest request, int roleId, int userId);
 
+    InventoryBatchResponseDTO getById(Long id, int roleId, int userId);
 
-    List<InventoryBatchDTO> getAllBatches();
+    void delete(Long id, int roleId, int userId);
 
-    List<InventoryDTO> getAllBatchResponses();
+    InventoryExportResponseDTO exportStock(InventoryExportRequest request);
 
-    List<InventoryBatchDTO> getBatchesByProductName(String productName);
+    List<InventoryBatchResponseDTO> getAllBatches();
 
-    List<InventoryBatchDTO> getBatchesBySupplierName(String supplierName);
+    List<InventoryBatchResponseDTO> getBatchesByProductName(String productName);
+
+    List<InventoryBatchResponseDTO> getBatchesBySupplierName(String supplierName);
 }
