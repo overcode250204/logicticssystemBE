@@ -6,6 +6,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.util.List;
+
 @Getter
 @Setter
 @Builder
@@ -16,4 +18,5 @@ public class InventoryExportResponseDTO {
     private Integer requestedQuantity;
     private Integer exportedQuantity;
     private Integer remainingStock;
+    private List<InventoryExportBatchDTO> batches;
 }

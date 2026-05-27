@@ -5,6 +5,7 @@ import com.overcode250204.smartlogicticssystem.base.BaseResponse;
 import com.overcode250204.smartlogicticssystem.dtos.request.InventoryBatchCreateRequest;
 import com.overcode250204.smartlogicticssystem.dtos.request.InventoryBatchUpdateRequest;
 import com.overcode250204.smartlogicticssystem.dtos.request.InventoryExportRequest;
+import com.overcode250204.smartlogicticssystem.dtos.response.InventoryBatchBarcodeResponseDTO;
 import com.overcode250204.smartlogicticssystem.dtos.response.InventoryBatchResponseDTO;
 import com.overcode250204.smartlogicticssystem.dtos.response.InventoryExportResponseDTO;
 import com.overcode250204.smartlogicticssystem.services.IInventoryBatchService;
@@ -42,6 +43,11 @@ public class InventoryBatchController extends BaseController {
             @RequestHeader(name = "X-Role-Id") int roleId,
             @RequestHeader(name = "X-User-Id") int userId) {
         return success(batchService.getById(id, roleId, userId), "Get by id successfully");
+    }
+
+    @GetMapping("/barcode/{barcode}")
+    public ResponseEntity<BaseResponse<InventoryBatchBarcodeResponseDTO>> getByBarcode(@PathVariable String barcode) {
+        return success(batchService.getByBarcode(barcode), "Get by barcode successfully");
     }
 
     @PutMapping("/{id}")

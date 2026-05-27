@@ -5,7 +5,9 @@ import com.overcode250204.smartlogicticssystem.dtos.request.InventoryBatchCreate
 import com.overcode250204.smartlogicticssystem.dtos.request.InventoryBatchUpdateRequest;
 import com.overcode250204.smartlogicticssystem.dtos.request.InventoryExportRequest;
 import com.overcode250204.smartlogicticssystem.dtos.request.InventoryTransactionCreateRequest;
+import com.overcode250204.smartlogicticssystem.dtos.response.InventoryBatchBarcodeResponseDTO;
 import com.overcode250204.smartlogicticssystem.dtos.response.InventoryBatchResponseDTO;
+import com.overcode250204.smartlogicticssystem.dtos.response.InventoryExportBatchDTO;
 import com.overcode250204.smartlogicticssystem.dtos.response.InventoryExportResponseDTO;
 import com.overcode250204.smartlogicticssystem.entities.InventoryBatch;
 import com.overcode250204.smartlogicticssystem.entities.Product;
@@ -19,12 +21,15 @@ import com.overcode250204.smartlogicticssystem.repositories.ProductRepository;
 
 import com.overcode250204.smartlogicticssystem.services.IInventoryBatchService;
 import com.overcode250204.smartlogicticssystem.services.IInventoryTransactionService;
+import com.overcode250204.smartlogicticssystem.services.QrCodeService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
@@ -35,6 +40,7 @@ public class InventoryBatchService extends BaseServiceImpl implements IInventory
     private final ProductRepository productRepository;
     private final InventoryBatchMapper batchMapper;
     private final IInventoryTransactionService transactionService;
+    private final QrCodeService qrCodeService;
 
     @Override
     @Transactional
@@ -46,7 +52,8 @@ public class InventoryBatchService extends BaseServiceImpl implements IInventory
             throw new AppException(ProductErrorCode.INVALID_QUANTITY);
         }
 
-        Sort sort = Sort.by(Sort.Direction.ASC, "importDate");
+        Sort sort = Sort.by(Sort.Direction.ASC, "expirationDate")
+                .and(Sort.by(Sort.Direction.ASC, "importDate"));
         List<InventoryBatch> batches = batchRepository.findByProduct_ProductIdAndRemainingQuantityGreaterThan(
                 request.getProductId(), 0, sort);
 
@@ -59,6 +66,7 @@ public class InventoryBatchService extends BaseServiceImpl implements IInventory
         }
 
         int remainingToExport = request.getQuantity();
+        List<InventoryExportBatchDTO> exportedBatches = new ArrayList<>();
         for (InventoryBatch batch : batches) {
             if (remainingToExport <= 0)
                 break;
@@ -66,8 +74,13 @@ public class InventoryBatchService extends BaseServiceImpl implements IInventory
             int exportQuantity = Math.min(batch.getRemainingQuantity(), remainingToExport);
             batch.setRemainingQuantity(batch.getRemainingQuantity() - exportQuantity);
             batchRepository.save(batch);
+            exportedBatches.add(InventoryExportBatchDTO.builder()
+                    .batchId(batch.getBatchId())
+                    .exportedQuantity(exportQuantity)
+                    .remainingQuantity(batch.getRemainingQuantity())
+                    .build());
 
-            try{
+            try {
                 InventoryTransactionCreateRequest transactionRequest = new InventoryTransactionCreateRequest();
                 transactionRequest.setBatchId(batch.getBatchId());
                 transactionRequest.setType(InventoryTransactionType.EXPORT);
@@ -81,7 +94,7 @@ public class InventoryBatchService extends BaseServiceImpl implements IInventory
         }
 
         return batchMapper.toExportResponse(product, request.getQuantity(), request.getQuantity(),
-                totalAvailable - request.getQuantity());
+                totalAvailable - request.getQuantity(), exportedBatches);
     }
 
     @Override
@@ -112,7 +125,10 @@ public class InventoryBatchService extends BaseServiceImpl implements IInventory
 
         InventoryBatch batch = batchMapper.toEntity(request);
         batch.setProduct(product);
-
+        String barcode = generateBarcode();
+        String barcodeImageUrl = qrCodeService.generateAndUploadQrCode(barcode);
+        batch.setBarcode(barcode);
+        batch.setBarcodeImageUrl(barcodeImageUrl);
         InventoryBatch savedBatch = batchRepository.save(batch);
 
         InventoryTransactionCreateRequest transactionRequest = new InventoryTransactionCreateRequest();
@@ -144,9 +160,26 @@ public class InventoryBatchService extends BaseServiceImpl implements IInventory
     }
 
     @Override
+    public InventoryBatchBarcodeResponseDTO getByBarcode(String barcode) {
+        InventoryBatch batch = batchRepository.findByBarcode(barcode)
+                .orElseThrow(() -> new AppException(InventoryErrorCode.BATCH_NOT_FOUND));
+        return batchMapper.toBarcodeResponse(batch);
+    }
+
+    @Override
     @Transactional
     public void delete(Long id, int roleId, int userId) {
         InventoryBatch batch = findByIdOrThrow(batchRepository, id, InventoryErrorCode.BATCH_NOT_FOUND);
         batchRepository.delete(batch);
+    }
+
+    private String generateBarcode() {
+        String barcode;
+
+        do {
+            barcode = "BATCH-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+        } while (batchRepository.existsByBarcode(barcode));
+
+        return barcode;
     }
 }

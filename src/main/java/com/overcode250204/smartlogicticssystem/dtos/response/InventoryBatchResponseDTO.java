@@ -19,6 +19,8 @@ public class InventoryBatchResponseDTO {
     private SupplierResponseDTO supplier;
     private LocalDateTime importDate;
     private LocalDateTime expirationDate;
+    private String barcode;
+    private String barcodeImageUrl;
     private Integer quantity;
     private Integer remainingQuantity;
     private String status;

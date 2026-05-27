@@ -2,7 +2,9 @@ package com.overcode250204.smartlogicticssystem.mapper;
 
 import com.overcode250204.smartlogicticssystem.dtos.request.InventoryBatchCreateRequest;
 import com.overcode250204.smartlogicticssystem.dtos.request.InventoryBatchUpdateRequest;
+import com.overcode250204.smartlogicticssystem.dtos.response.InventoryBatchBarcodeResponseDTO;
 import com.overcode250204.smartlogicticssystem.dtos.response.InventoryBatchResponseDTO;
+import com.overcode250204.smartlogicticssystem.dtos.response.InventoryExportBatchDTO;
 import com.overcode250204.smartlogicticssystem.dtos.response.InventoryExportResponseDTO;
 import com.overcode250204.smartlogicticssystem.dtos.response.InventoryBatchSimpleResponseDTO;
 import com.overcode250204.smartlogicticssystem.entities.InventoryBatch;
@@ -10,6 +12,8 @@ import com.overcode250204.smartlogicticssystem.entities.Product;
 import com.overcode250204.smartlogicticssystem.entities.Supplier;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
+
+import java.util.List;
 
 @Component
 @RequiredArgsConstructor
@@ -31,9 +35,23 @@ public class InventoryBatchMapper {
                 .supplier(supplierMapper.toSimpleResponse(supplier))
                 .importDate(batch.getImportDate())
                 .expirationDate(batch.getExpirationDate())
+                .barcode(batch.getBarcode())
+                .barcodeImageUrl(batch.getBarcodeImageUrl())
                 .quantity(batch.getQuantity())
                 .remainingQuantity(batch.getRemainingQuantity())
                 .status(batch.getStatus())
+                .build();
+    }
+
+    public InventoryBatchBarcodeResponseDTO toBarcodeResponse(InventoryBatch batch) {
+        if (batch == null) {
+            return null;
+        }
+
+        return InventoryBatchBarcodeResponseDTO.builder()
+                .batchId(batch.getBatchId())
+                .barcode(batch.getBarcode())
+                .barcodeImageUrl(batch.getBarcodeImageUrl())
                 .build();
     }
 
@@ -53,12 +71,13 @@ public class InventoryBatchMapper {
     }
 
     public InventoryExportResponseDTO toExportResponse(Product product, int requestedQuantity, int exportedQuantity,
-            int remainingStock) {
+            int remainingStock, List<InventoryExportBatchDTO> batches) {
         return InventoryExportResponseDTO.builder()
                 .product(productMapper.toSimpleResponse(product))
                 .requestedQuantity(requestedQuantity)
                 .exportedQuantity(exportedQuantity)
                 .remainingStock(remainingStock)
+                .batches(batches)
                 .build();
     }
 

@@ -27,6 +27,12 @@ public class InventoryBatch {
     @Column(name = "expirationdate")
     private LocalDateTime expirationDate;
 
+    @Column(name = "barcode", unique = true)
+    private String barcode;
+
+    @Column(name = "barcodeimageurl")
+    private String barcodeImageUrl;
+
     @Column(name = "quantity", nullable = false)
     private Integer quantity;
 

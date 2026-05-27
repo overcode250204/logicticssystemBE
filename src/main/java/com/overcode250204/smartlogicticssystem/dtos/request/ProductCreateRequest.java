@@ -14,9 +14,6 @@ import java.math.BigDecimal;
 @Getter
 @Setter
 public class ProductCreateRequest {
-    @NotBlank(message = ProductErrorCode.Messages.PRODUCT_CODE_REQUIRED)
-    @Size(max = 50, message = ProductErrorCode.Messages.PRODUCT_CODE_TOO_LONG)
-    private String productCode;
 
     @NotBlank(message = ProductErrorCode.Messages.PRODUCT_NAME_REQUIRED)
     @Size(max = 150, message = ProductErrorCode.Messages.PRODUCT_NAME_TOO_LONG)
