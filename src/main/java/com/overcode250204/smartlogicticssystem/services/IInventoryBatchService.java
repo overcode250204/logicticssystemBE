@@ -18,7 +18,9 @@ public interface IInventoryBatchService{
 
     InventoryBatchResponseDTO getById(Long id, int roleId, int userId);
 
-    InventoryBatchBarcodeResponseDTO getByBarcode(String barcode);
+    InventoryBatchBarcodeResponseDTO getBatchByBarcode(String barcode);
+
+    InventoryBatchBarcodeResponseDTO deductBatchQuantity(Long batchId, Integer quantity);
 
     void delete(Long id, int roleId, int userId);
 
@@ -29,4 +31,6 @@ public interface IInventoryBatchService{
     List<InventoryBatchResponseDTO> getBatchesByProductName(String productName);
 
     List<InventoryBatchResponseDTO> getBatchesBySupplierName(String supplierName);
+
+    List<InventoryBatchResponseDTO> getBatchesByProductId(Long productId);
 }

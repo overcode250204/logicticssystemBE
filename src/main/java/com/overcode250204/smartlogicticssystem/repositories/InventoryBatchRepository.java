@@ -18,6 +18,9 @@ public interface InventoryBatchRepository extends JpaRepository<InventoryBatch, 
             Integer remainingQuantity,
             Sort sort
     );
+
+    List<InventoryBatch> findByProduct_ProductIdOrderByExpirationDateAsc(Long productId);
+
     boolean existsByBarcode(String barcode);
 
     Optional<InventoryBatch> findByBarcode(String barcode);

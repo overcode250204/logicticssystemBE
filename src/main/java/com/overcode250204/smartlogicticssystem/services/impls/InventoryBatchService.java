@@ -11,36 +11,41 @@ import com.overcode250204.smartlogicticssystem.dtos.response.InventoryExportBatc
 import com.overcode250204.smartlogicticssystem.dtos.response.InventoryExportResponseDTO;
 import com.overcode250204.smartlogicticssystem.entities.InventoryBatch;
 import com.overcode250204.smartlogicticssystem.entities.Product;
+import com.overcode250204.smartlogicticssystem.enums.InventoryBatchStatus;
+import com.overcode250204.smartlogicticssystem.enums.InventoryTransactionType;
 import com.overcode250204.smartlogicticssystem.exception.AppException;
+import com.overcode250204.smartlogicticssystem.exception.InventoryErrorCode;
 import com.overcode250204.smartlogicticssystem.exception.ProductErrorCode;
 import com.overcode250204.smartlogicticssystem.mapper.InventoryBatchMapper;
-import com.overcode250204.smartlogicticssystem.enums.InventoryTransactionType;
-import com.overcode250204.smartlogicticssystem.exception.InventoryErrorCode;
 import com.overcode250204.smartlogicticssystem.repositories.InventoryBatchRepository;
 import com.overcode250204.smartlogicticssystem.repositories.ProductRepository;
-
 import com.overcode250204.smartlogicticssystem.services.IInventoryBatchService;
 import com.overcode250204.smartlogicticssystem.services.IInventoryTransactionService;
-import com.overcode250204.smartlogicticssystem.services.QrCodeService;
+import com.overcode250204.smartlogicticssystem.services.S3FileService;
+import com.overcode250204.smartlogicticssystem.utils.BarcodeGeneratorUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class InventoryBatchService extends BaseServiceImpl implements IInventoryBatchService {
 
+    private static final String BARCODE_FOLDER = "barcodes";
+    private static final String PNG_CONTENT_TYPE = "image/png";
+
     private final InventoryBatchRepository batchRepository;
     private final ProductRepository productRepository;
     private final InventoryBatchMapper batchMapper;
     private final IInventoryTransactionService transactionService;
-    private final QrCodeService qrCodeService;
+    private final S3FileService s3FileService;
 
     @Override
     @Transactional
@@ -52,8 +57,7 @@ public class InventoryBatchService extends BaseServiceImpl implements IInventory
             throw new AppException(ProductErrorCode.INVALID_QUANTITY);
         }
 
-        Sort sort = Sort.by(Sort.Direction.ASC, "expirationDate")
-                .and(Sort.by(Sort.Direction.ASC, "importDate"));
+        Sort sort = Sort.by(Sort.Direction.ASC, "importDate");
         List<InventoryBatch> batches = batchRepository.findByProduct_ProductIdAndRemainingQuantityGreaterThan(
                 request.getProductId(), 0, sort);
 
@@ -68,8 +72,9 @@ public class InventoryBatchService extends BaseServiceImpl implements IInventory
         int remainingToExport = request.getQuantity();
         List<InventoryExportBatchDTO> exportedBatches = new ArrayList<>();
         for (InventoryBatch batch : batches) {
-            if (remainingToExport <= 0)
+            if (remainingToExport <= 0) {
                 break;
+            }
 
             int exportQuantity = Math.min(batch.getRemainingQuantity(), remainingToExport);
             batch.setRemainingQuantity(batch.getRemainingQuantity() - exportQuantity);
@@ -119,15 +124,28 @@ public class InventoryBatchService extends BaseServiceImpl implements IInventory
     }
 
     @Override
+    public List<InventoryBatchResponseDTO> getBatchesByProductId(Long productId) {
+        List<InventoryBatch> batches = batchRepository.findByProduct_ProductIdOrderByExpirationDateAsc(productId);
+        return batches.stream().map(batch -> {
+            InventoryBatchResponseDTO dto = batchMapper.toResponse(batch);
+            dto.setStatus(resolveBatchStatus(batch));
+            return dto;
+        }).collect(Collectors.toList());
+    }
+
+    @Override
     @Transactional
     public InventoryBatchResponseDTO create(InventoryBatchCreateRequest request, int roleId, int userId) {
         Product product = findByIdOrThrow(productRepository, request.getProductId(), ProductErrorCode.PRODUCT_NOT_FOUND);
 
+        BarcodeGeneratorUtil.GeneratedBarcode generatedBarcode = generateUniqueBarcode();
+        String barcodeImageUrl = uploadBarcodeImage(generatedBarcode);
+
         InventoryBatch batch = batchMapper.toEntity(request);
         batch.setProduct(product);
-        String barcode = generateBarcode();
-        String barcodeImageUrl = qrCodeService.generateAndUploadQrCode(barcode);
-        batch.setBarcode(barcode);
+        batch.setReceived(request.isReceived());
+        batch.setReceivedAt(LocalDateTime.now());
+        batch.setBarcode(generatedBarcode.barcode());
         batch.setBarcodeImageUrl(barcodeImageUrl);
         InventoryBatch savedBatch = batchRepository.save(batch);
 
@@ -160,10 +178,40 @@ public class InventoryBatchService extends BaseServiceImpl implements IInventory
     }
 
     @Override
-    public InventoryBatchBarcodeResponseDTO getByBarcode(String barcode) {
+    public InventoryBatchBarcodeResponseDTO getBatchByBarcode(String barcode) {
         InventoryBatch batch = batchRepository.findByBarcode(barcode)
-                .orElseThrow(() -> new AppException(InventoryErrorCode.BATCH_NOT_FOUND));
+                .orElseThrow(() -> new AppException(InventoryErrorCode.BARCODE_NOT_FOUND));
         return batchMapper.toBarcodeResponse(batch);
+    }
+
+    @Override
+    @Transactional
+    public InventoryBatchBarcodeResponseDTO deductBatchQuantity(Long batchId, Integer quantity) {
+        InventoryBatch batch = findByIdOrThrow(batchRepository, batchId, InventoryErrorCode.BATCH_NOT_FOUND);
+
+        if (quantity == null || quantity <= 0) {
+            throw new AppException(ProductErrorCode.INVALID_QUANTITY);
+        }
+
+        int remainingQuantity = batch.getRemainingQuantity() != null ? batch.getRemainingQuantity() : 0;
+        if (quantity > remainingQuantity) {
+            throw new AppException(InventoryErrorCode.INSUFFICIENT_STOCK);
+        }
+
+        batch.setRemainingQuantity(remainingQuantity - quantity);
+        InventoryBatch savedBatch = batchRepository.save(batch);
+
+        try {
+            InventoryTransactionCreateRequest transactionRequest = new InventoryTransactionCreateRequest();
+            transactionRequest.setBatchId(savedBatch.getBatchId());
+            transactionRequest.setType(InventoryTransactionType.EXPORT);
+            transactionRequest.setQuantity(quantity);
+            transactionService.create(transactionRequest, 0, 0);
+        } catch (Exception e) {
+            throw new AppException(InventoryErrorCode.TRANSACTION_RECORD_FAILED);
+        }
+
+        return batchMapper.toBarcodeResponse(savedBatch);
     }
 
     @Override
@@ -173,13 +221,37 @@ public class InventoryBatchService extends BaseServiceImpl implements IInventory
         batchRepository.delete(batch);
     }
 
-    private String generateBarcode() {
-        String barcode;
+    private InventoryBatchStatus resolveBatchStatus(InventoryBatch batch) {
+        if (batch.getRemainingQuantity() != null && batch.getRemainingQuantity() <= 0) {
+            return InventoryBatchStatus.OUT_OF_STOCK;
+        }
+        if (batch.getExpirationDate() != null
+                && batch.getExpirationDate().isBefore(java.time.LocalDateTime.now().plusDays(30))) {
+            return InventoryBatchStatus.EXPIRING_SOON;
+        }
+        if (batch.getRemainingQuantity() != null && batch.getRemainingQuantity() <= 10) {
+            return InventoryBatchStatus.LOW_STOCK;
+        }
+        return InventoryBatchStatus.NORMAL;
+    }
+
+    private BarcodeGeneratorUtil.GeneratedBarcode generateUniqueBarcode() {
+        BarcodeGeneratorUtil.GeneratedBarcode generatedBarcode;
 
         do {
-            barcode = "BATCH-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
-        } while (batchRepository.existsByBarcode(barcode));
+            generatedBarcode = BarcodeGeneratorUtil.generateEAN13Barcode(generateBarcodeSeed());
+        } while (batchRepository.existsByBarcode(generatedBarcode.barcode()));
 
-        return barcode;
+        return generatedBarcode;
+    }
+
+    private String generateBarcodeSeed() {
+        long seed = ThreadLocalRandom.current().nextLong(100_000_000_000L, 1_000_000_000_000L);
+        return Long.toString(seed);
+    }
+
+    private String uploadBarcodeImage(BarcodeGeneratorUtil.GeneratedBarcode generatedBarcode) {
+        String key = "%s/%s.png".formatted(BARCODE_FOLDER, generatedBarcode.barcode());
+        return s3FileService.uploadBytes(generatedBarcode.pngBytes(), key, PNG_CONTENT_TYPE);
     }
 }

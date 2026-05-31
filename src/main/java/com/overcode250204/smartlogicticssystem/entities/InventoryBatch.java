@@ -1,5 +1,7 @@
 package com.overcode250204.smartlogicticssystem.entities;
 
+import com.overcode250204.smartlogicticssystem.converter.InventoryBatchStatusConverter;
+import com.overcode250204.smartlogicticssystem.enums.InventoryBatchStatus;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -30,15 +32,23 @@ public class InventoryBatch {
     @Column(name = "barcode", unique = true)
     private String barcode;
 
+
+    @Column(name = "receivedat")
+    private LocalDateTime receivedAt;
+
     @Column(name = "barcodeimageurl")
     private String barcodeImageUrl;
 
     @Column(name = "quantity", nullable = false)
     private Integer quantity;
 
+    @Column(name = "received")
+    private Boolean received = false;
+
     @Column(name = "remainingquantity", nullable = false)
     private Integer remainingQuantity;
 
+    @Convert(converter = InventoryBatchStatusConverter.class)
     @Column(name = "status")
-    private String status = "Good";
+    private InventoryBatchStatus status = InventoryBatchStatus.GOOD;
 }

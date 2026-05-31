@@ -10,6 +10,7 @@ import com.overcode250204.smartlogicticssystem.dtos.response.InventoryBatchSimpl
 import com.overcode250204.smartlogicticssystem.entities.InventoryBatch;
 import com.overcode250204.smartlogicticssystem.entities.Product;
 import com.overcode250204.smartlogicticssystem.entities.Supplier;
+import com.overcode250204.smartlogicticssystem.enums.InventoryBatchStatus;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -48,10 +49,18 @@ public class InventoryBatchMapper {
             return null;
         }
 
+        Product product = batch.getProduct();
         return InventoryBatchBarcodeResponseDTO.builder()
                 .batchId(batch.getBatchId())
                 .barcode(batch.getBarcode())
                 .barcodeImageUrl(batch.getBarcodeImageUrl())
+                .productId(product != null ? product.getProductId() : null)
+                .productName(product != null ? product.getProductName() : null)
+                .importDate(batch.getImportDate())
+                .expirationDate(batch.getExpirationDate())
+                .quantity(batch.getQuantity())
+                .remainingQuantity(batch.getRemainingQuantity())
+                .status(batch.getStatus())
                 .build();
     }
 
@@ -91,7 +100,7 @@ public class InventoryBatchMapper {
         batch.setExpirationDate(request.getExpirationDate());
         batch.setQuantity(request.getQuantity());
         batch.setRemainingQuantity(request.getQuantity());
-        batch.setStatus(request.getStatus());
+        batch.setStatus(request.getStatus() != null ? request.getStatus() : InventoryBatchStatus.GOOD);
         return batch;
     }
 

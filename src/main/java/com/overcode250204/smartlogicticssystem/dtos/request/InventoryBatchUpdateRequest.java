@@ -1,8 +1,8 @@
 package com.overcode250204.smartlogicticssystem.dtos.request;
 
+import com.overcode250204.smartlogicticssystem.enums.InventoryBatchStatus;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.PositiveOrZero;
-import jakarta.validation.constraints.Size;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -24,6 +24,5 @@ public class InventoryBatchUpdateRequest {
     @PositiveOrZero(message = "Remaining quantity must not be negative")
     private Integer remainingQuantity;
 
-    @Size(max = 50, message = "Status must not exceed 50 characters")
-    private String status;
+    private InventoryBatchStatus status;
 }

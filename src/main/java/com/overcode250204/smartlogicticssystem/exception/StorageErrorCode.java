@@ -9,7 +9,8 @@ public enum StorageErrorCode implements BaseErrorCode {
     FILE_UPLOAD_FAILED(HttpStatus.BAD_REQUEST, Messages.FILE_UPLOAD_FAILED),
     FILE_DELETE_FAILED(HttpStatus.BAD_REQUEST, Messages.FILE_DELETE_FAILED),
     INVALID_FILE(HttpStatus.BAD_REQUEST, Messages.INVALID_FILE),
-    QR_CODE_GENERATION_FAILED(HttpStatus.BAD_REQUEST, Messages.QR_CODE_GENERATION_FAILED);
+    QR_CODE_GENERATION_FAILED(HttpStatus.BAD_REQUEST, Messages.QR_CODE_GENERATION_FAILED),
+    BARCODE_GENERATION_FAILED(HttpStatus.BAD_REQUEST, Messages.BARCODE_GENERATION_FAILED);
 
     private final String message;
     private final HttpStatus httpStatus;
@@ -24,5 +25,6 @@ public enum StorageErrorCode implements BaseErrorCode {
         public static final String FILE_DELETE_FAILED = "File delete failed";
         public static final String INVALID_FILE = "Invalid file";
         public static final String QR_CODE_GENERATION_FAILED = "QR code generation failed";
+        public static final String BARCODE_GENERATION_FAILED = "Barcode generation failed";
     }
 }
