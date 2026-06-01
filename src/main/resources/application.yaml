@@ -14,5 +14,17 @@ spring:
     database-platform: org.hibernate.dialect.PostgreSQLDialect
     hibernate:
       ddl-auto: update
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 5MB
+
+aws:
+  region: ${AWS_REGION:ap-southeast-1}
+  iam:
+    access-key: ${AWS_ACCESS_KEY:}
+    secret-key: ${AWS_SECRET_KEY:}
+  s3:
+    receipt-bucket: ${AWS_S3_RECEIPT_BUCKET:}
 #server:
 #  address: 0.0.0.0

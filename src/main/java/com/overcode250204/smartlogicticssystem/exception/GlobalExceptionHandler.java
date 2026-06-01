@@ -7,6 +7,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -31,5 +32,12 @@ public class GlobalExceptionHandler {
         String message = e.getBindingResult().getFieldError().getDefaultMessage();
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(BaseResponse.error(HttpStatus.BAD_REQUEST.value(), message));
+    }
+
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<BaseResponse<Void>> handleMaxUploadSizeExceededException() {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(BaseResponse.error(HttpStatus.BAD_REQUEST.value(),
+                        "Receipt image must be less than or equal to 5MB"));
     }
 }
