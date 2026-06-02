@@ -54,8 +54,9 @@ public class InventoryBatchController extends BaseController {
     @PatchMapping("/{id}/deduct")
     public ResponseEntity<BaseResponse<InventoryBatchBarcodeResponseDTO>> deductBatchQuantity(
             @PathVariable Long id,
-            @Valid @RequestBody InventoryBatchDeductRequest request) {
-        return success(batchService.deductBatchQuantity(id, request.getQuantity()), "Batch quantity deducted successfully");
+            @Valid @RequestBody InventoryBatchDeductRequest request,
+            @RequestHeader(name = "X-User-Id", required = false) Long userId) {
+        return success(batchService.deductBatchQuantity(id, request.getQuantity(), userId), "Batch quantity deducted successfully");
     }
 
     @PutMapping("/{id}")

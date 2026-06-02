@@ -5,12 +5,14 @@ import com.overcode250204.smartlogicticssystem.dtos.request.InventoryBatchCreate
 import com.overcode250204.smartlogicticssystem.dtos.request.InventoryBatchUpdateRequest;
 import com.overcode250204.smartlogicticssystem.dtos.request.InventoryExportRequest;
 import com.overcode250204.smartlogicticssystem.dtos.request.InventoryTransactionCreateRequest;
+import com.overcode250204.smartlogicticssystem.dtos.InventoryDeductedEvent;
 import com.overcode250204.smartlogicticssystem.dtos.response.InventoryBatchBarcodeResponseDTO;
 import com.overcode250204.smartlogicticssystem.dtos.response.InventoryBatchResponseDTO;
 import com.overcode250204.smartlogicticssystem.dtos.response.InventoryExportBatchDTO;
 import com.overcode250204.smartlogicticssystem.dtos.response.InventoryExportResponseDTO;
 import com.overcode250204.smartlogicticssystem.entities.InventoryBatch;
 import com.overcode250204.smartlogicticssystem.entities.Product;
+import com.overcode250204.smartlogicticssystem.entities.User;
 import com.overcode250204.smartlogicticssystem.enums.InventoryBatchStatus;
 import com.overcode250204.smartlogicticssystem.enums.InventoryTransactionType;
 import com.overcode250204.smartlogicticssystem.exception.AppException;
@@ -19,8 +21,10 @@ import com.overcode250204.smartlogicticssystem.exception.ProductErrorCode;
 import com.overcode250204.smartlogicticssystem.mapper.InventoryBatchMapper;
 import com.overcode250204.smartlogicticssystem.repositories.InventoryBatchRepository;
 import com.overcode250204.smartlogicticssystem.repositories.ProductRepository;
+import com.overcode250204.smartlogicticssystem.repositories.UserRepository;
 import com.overcode250204.smartlogicticssystem.services.IInventoryBatchService;
 import com.overcode250204.smartlogicticssystem.services.IInventoryTransactionService;
+import com.overcode250204.smartlogicticssystem.services.NotificationRealtimeService;
 import com.overcode250204.smartlogicticssystem.services.S3FileService;
 import com.overcode250204.smartlogicticssystem.utils.BarcodeGeneratorUtil;
 import lombok.RequiredArgsConstructor;
@@ -38,6 +42,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class InventoryBatchService extends BaseServiceImpl implements IInventoryBatchService {
 
+    private static final List<Integer> INVENTORY_NOTIFICATION_ROLE_IDS = List.of(1, 2);
     private static final String BARCODE_FOLDER = "barcodes";
     private static final String PNG_CONTENT_TYPE = "image/png";
 
@@ -45,6 +50,8 @@ public class InventoryBatchService extends BaseServiceImpl implements IInventory
     private final ProductRepository productRepository;
     private final InventoryBatchMapper batchMapper;
     private final IInventoryTransactionService transactionService;
+    private final NotificationRealtimeService notificationRealtimeService;
+    private final UserRepository userRepository;
     private final S3FileService s3FileService;
 
     @Override
@@ -186,7 +193,7 @@ public class InventoryBatchService extends BaseServiceImpl implements IInventory
 
     @Override
     @Transactional
-    public InventoryBatchBarcodeResponseDTO deductBatchQuantity(Long batchId, Integer quantity) {
+    public InventoryBatchBarcodeResponseDTO deductBatchQuantity(Long batchId, Integer quantity, Long staffId) {
         InventoryBatch batch = findByIdOrThrow(batchRepository, batchId, InventoryErrorCode.BATCH_NOT_FOUND);
 
         if (quantity == null || quantity <= 0) {
@@ -210,6 +217,8 @@ public class InventoryBatchService extends BaseServiceImpl implements IInventory
         } catch (Exception e) {
             throw new AppException(InventoryErrorCode.TRANSACTION_RECORD_FAILED);
         }
+
+        sendInventoryDeductedNotifications(savedBatch, quantity, staffId);
 
         return batchMapper.toBarcodeResponse(savedBatch);
     }
@@ -253,5 +262,41 @@ public class InventoryBatchService extends BaseServiceImpl implements IInventory
     private String uploadBarcodeImage(BarcodeGeneratorUtil.GeneratedBarcode generatedBarcode) {
         String key = "%s/%s.png".formatted(BARCODE_FOLDER, generatedBarcode.barcode());
         return s3FileService.uploadBytes(generatedBarcode.pngBytes(), key, PNG_CONTENT_TYPE);
+    }
+
+    private void sendInventoryDeductedNotifications(InventoryBatch batch, Integer quantity, Long staffId) {
+        String staffName = resolveStaffName(staffId);
+        String productName = resolveProductName(batch);
+
+        userRepository.findByRole_RoleIdInAndIsActiveTrue(INVENTORY_NOTIFICATION_ROLE_IDS)
+                .forEach(recipient -> notificationRealtimeService.sendInventoryDeductedNotification(
+                        new InventoryDeductedEvent(
+                                recipient.getUserId(),
+                                staffName,
+                                productName,
+                                quantity,
+                                LocalDateTime.now()
+                        )
+                ));
+    }
+
+    private String resolveStaffName(Long staffId) {
+        if (staffId == null) {
+            return "Staff";
+        }
+
+        return userRepository.findById(staffId)
+                .map(User::getFullName)
+                .filter(name -> !name.isBlank())
+                .orElse("Staff");
+    }
+
+    private String resolveProductName(InventoryBatch batch) {
+        Product product = batch.getProduct();
+        if (product == null || product.getProductName() == null || product.getProductName().isBlank()) {
+            return "Unknown product";
+        }
+
+        return product.getProductName();
     }
 }
