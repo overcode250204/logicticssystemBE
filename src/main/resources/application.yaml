@@ -6,13 +6,16 @@ spring:
       enabled: true
   datasource:
     url: jdbc:postgresql://localhost:5432/smart_logistics
-    username: postgres
-    password: root
+    username: admin
+    password: HelloYoutube
     driver-class-name: org.postgresql.Driver
 
   jpa:
     database-platform: org.hibernate.dialect.PostgreSQLDialect
     hibernate:
       ddl-auto: update
-#server:
-#  address: 0.0.0.0
+  data:
+    redis:
+      host: localhost
+      port: 6379
+
