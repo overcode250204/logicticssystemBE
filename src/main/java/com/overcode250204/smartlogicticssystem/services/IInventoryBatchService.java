@@ -20,7 +20,7 @@ public interface IInventoryBatchService{
 
     InventoryBatchBarcodeResponseDTO getBatchByBarcode(String barcode);
 
-    InventoryBatchBarcodeResponseDTO deductBatchQuantity(Long batchId, Integer quantity);
+    InventoryBatchBarcodeResponseDTO deductBatchQuantity(Long batchId, Integer quantity, Long staffId);
 
     void delete(Long id, int roleId, int userId);
 
