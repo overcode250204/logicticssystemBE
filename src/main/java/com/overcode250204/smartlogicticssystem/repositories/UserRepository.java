@@ -23,4 +23,5 @@ public interface UserRepository extends JpaRepository<User, Long> {
             @Param("roleId") Integer roleId,
             @Param("isActive") Boolean isActive
     );
+    Optional<User> findByPhone(String phone);
 }

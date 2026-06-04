@@ -14,8 +14,6 @@ public interface IInventoryBatchService{
 
     InventoryBatchResponseDTO update(Long id, InventoryBatchUpdateRequest request, int roleId, int userId);
 
-
-
     InventoryBatchResponseDTO getById(Long id, int roleId, int userId);
 
     InventoryBatchBarcodeResponseDTO getBatchByBarcode(String barcode);

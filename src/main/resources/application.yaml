@@ -6,8 +6,8 @@ spring:
       enabled: true
   datasource:
     url: jdbc:postgresql://localhost:5432/smart_logistics
-    username: postgres
-    password: root
+    username: admin
+    password: HelloYoutube
     driver-class-name: org.postgresql.Driver
 
   jpa:
@@ -24,3 +24,8 @@ aws:
     secret-key: ${AWS_SECRET_ACCESS_KEY}
 #server:
 #  address: 0.0.0.0
+
+firebase:
+  config-path: "firebase-service-account.json"
+
+
