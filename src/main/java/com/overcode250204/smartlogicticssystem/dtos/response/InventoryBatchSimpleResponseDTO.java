@@ -1,5 +1,6 @@
 package com.overcode250204.smartlogicticssystem.dtos.response;
 
+import com.overcode250204.smartlogicticssystem.enums.InventoryBatchStatus;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -19,5 +20,5 @@ public class InventoryBatchSimpleResponseDTO {
     private LocalDateTime expirationDate;
     private Integer quantity;
     private Integer remainingQuantity;
-    private String status;
+    private InventoryBatchStatus status;
 }

@@ -48,7 +48,6 @@ public class ProductMapper {
         }
 
         Product product = new Product();
-        product.setProductCode(request.getProductCode());
         product.setProductName(request.getProductName());
         product.setMinStockLevel(request.getMinStockLevel());
         product.setPrice(request.getPrice());
