@@ -31,6 +31,9 @@ public class Order {
     @Column(name = "totalweight")
     private BigDecimal totalWeight;
 
+    @Column(name = "totalamount")
+    private BigDecimal totalAmount;
+
     @CreationTimestamp
     @Column(name = "createdat", updatable = false)
     private LocalDateTime createdAt;
