@@ -8,21 +8,22 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface InventoryBatchRepository extends JpaRepository<InventoryBatch, Long> {
-    @Query("""
-    SELECT COALESCE(SUM(b.remainingQuantity), 0)
-    FROM InventoryBatch b
-    WHERE b.product.productId = :productId
-""")
-    Integer sumRemainingQuantityByProductId(Long productId);
+
     List<InventoryBatch> findByProduct_ProductIdAndRemainingQuantityGreaterThan(
             Long productId,
             Integer remainingQuantity,
             Sort sort
     );
 
+    List<InventoryBatch> findByProduct_ProductIdOrderByExpirationDateAsc(Long productId);
+
+    boolean existsByBarcode(String barcode);
+
+    Optional<InventoryBatch> findByBarcode(String barcode);
 
     List<InventoryBatch> findByProductProductNameContainingIgnoreCase(String productName);
     List<InventoryBatch> findByProductSupplierSupplierNameContainingIgnoreCase(String supplierName);

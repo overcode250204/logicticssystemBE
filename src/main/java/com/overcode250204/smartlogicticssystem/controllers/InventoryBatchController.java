@@ -3,8 +3,10 @@ package com.overcode250204.smartlogicticssystem.controllers;
 import com.overcode250204.smartlogicticssystem.base.BaseController;
 import com.overcode250204.smartlogicticssystem.base.BaseResponse;
 import com.overcode250204.smartlogicticssystem.dtos.request.InventoryBatchCreateRequest;
+import com.overcode250204.smartlogicticssystem.dtos.request.InventoryBatchDeductRequest;
 import com.overcode250204.smartlogicticssystem.dtos.request.InventoryBatchUpdateRequest;
 import com.overcode250204.smartlogicticssystem.dtos.request.InventoryExportRequest;
+import com.overcode250204.smartlogicticssystem.dtos.response.InventoryBatchBarcodeResponseDTO;
 import com.overcode250204.smartlogicticssystem.dtos.response.InventoryBatchResponseDTO;
 import com.overcode250204.smartlogicticssystem.dtos.response.InventoryExportResponseDTO;
 import com.overcode250204.smartlogicticssystem.services.IInventoryBatchService;
@@ -44,6 +46,19 @@ public class InventoryBatchController extends BaseController {
         return success(batchService.getById(id, roleId, userId), "Get by id successfully");
     }
 
+    @GetMapping("/barcode/{barcode}")
+    public ResponseEntity<BaseResponse<InventoryBatchBarcodeResponseDTO>> getByBarcode(@PathVariable String barcode) {
+        return success(batchService.getBatchByBarcode(barcode), "Get by barcode successfully");
+    }
+
+    @PatchMapping("/{id}/deduct")
+    public ResponseEntity<BaseResponse<InventoryBatchBarcodeResponseDTO>> deductBatchQuantity(
+            @PathVariable Long id,
+            @Valid @RequestBody InventoryBatchDeductRequest request,
+            @RequestHeader(name = "X-User-Id", required = false) Long userId) {
+        return success(batchService.deductBatchQuantity(id, request.getQuantity(), userId), "Batch quantity deducted successfully");
+    }
+
     @PutMapping("/{id}")
     public ResponseEntity<BaseResponse<InventoryBatchResponseDTO>> update(@PathVariable Long id,
             @Valid @RequestBody InventoryBatchUpdateRequest request,
@@ -63,6 +78,11 @@ public class InventoryBatchController extends BaseController {
     @GetMapping("/search/product")
     public ResponseEntity<BaseResponse<List<InventoryBatchResponseDTO>>> getBatchesByProductName(@RequestParam String name) {
         return success(batchService.getBatchesByProductName(name), "Inventory batches retrieved by product name");
+    }
+
+    @GetMapping("/product/{productId}")
+    public ResponseEntity<BaseResponse<List<InventoryBatchResponseDTO>>> getBatchesByProductId(@PathVariable Long productId) {
+        return success(batchService.getBatchesByProductId(productId), "Inventory batches retrieved by product id");
     }
 
     @GetMapping("/search/supplier")

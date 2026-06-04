@@ -18,6 +18,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
@@ -45,14 +46,13 @@ public class ProductService extends BaseServiceImpl implements IProductService {
     @Override
     @Transactional
     public ProductResponseDTO create(ProductCreateRequest request, int roleId, int userId) {
-        if (productRepository.existsByProductCode(request.getProductCode())) {
-            throw new AppException(ProductErrorCode.PRODUCT_ALREADY_EXISTS);
-        }
+
 
         Supplier supplier = findByIdOrThrow(supplierRepository, request.getSupplierId(),
                 SupplierErrorCode.SUPPLIER_NOT_FOUND);
 
         Product product = productMapper.toEntity(request);
+        product.setProductCode(UUID.randomUUID().toString());
         product.setSupplier(supplier);
 
         return productMapper.toResponse(productRepository.save(product));

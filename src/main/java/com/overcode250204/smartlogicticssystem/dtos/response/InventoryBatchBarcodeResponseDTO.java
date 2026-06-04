@@ -14,14 +14,14 @@ import java.time.LocalDateTime;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class InventoryBatchResponseDTO {
+public class InventoryBatchBarcodeResponseDTO {
     private Long batchId;
-    private ProductResponseDTO product;
-    private SupplierResponseDTO supplier;
-    private LocalDateTime importDate;
-    private LocalDateTime expirationDate;
     private String barcode;
     private String barcodeImageUrl;
+    private Long productId;
+    private String productName;
+    private LocalDateTime importDate;
+    private LocalDateTime expirationDate;
     private Integer quantity;
     private Integer remainingQuantity;
     private InventoryBatchStatus status;

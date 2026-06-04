@@ -12,6 +12,9 @@ import java.util.Optional;
 @Repository
 public interface UserRepository extends JpaRepository<User, Long> {
     Optional<User> findByEmail(String email);
+
+    List<User> findByRole_RoleIdInAndIsActiveTrue(List<Integer> roleIds);
+
     @Query("SELECT u FROM User u WHERE " +
             "(:keyword IS NULL OR :keyword = '' OR LOWER(u.fullName) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
             "OR LOWER(u.email) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
