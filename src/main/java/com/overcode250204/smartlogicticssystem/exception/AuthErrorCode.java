@@ -7,7 +7,9 @@ import org.springframework.http.HttpStatus;
 @Getter
 public enum AuthErrorCode implements BaseErrorCode {
     UNAUTHENTICATED(HttpStatus.UNAUTHORIZED, Messages.UNAUTHENTICATED),
-    UNAUTHORIZED(HttpStatus.FORBIDDEN, Messages.UNAUTHORIZED);
+    UNAUTHORIZED(HttpStatus.FORBIDDEN, Messages.UNAUTHORIZED),
+    FAIL_TO_FIREBASE_AUTHENTICATION(HttpStatus.BAD_REQUEST, "failed to firebase authentication"),
+    ;
 
     private final String message;
     private final HttpStatus httpStatus;
