@@ -12,6 +12,7 @@ import org.springframework.stereotype.Component;
 public class ProductMapper {
 
     private final SupplierMapper supplierMapper;
+    private final ProductCategoryMapper productCategoryMapper;
 
     public ProductResponseDTO toResponse(Product product) {
         if (product == null) {
@@ -25,6 +26,7 @@ public class ProductMapper {
                 .price(product.getPrice())
                 .minStockLevel(product.getMinStockLevel())
                 .supplier(supplierMapper.toSimpleResponse(product.getSupplier()))
+                .category(productCategoryMapper.toResponse(product.getCategory()))
                 .build();
     }
 

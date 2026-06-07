@@ -5,11 +5,14 @@ import com.overcode250204.smartlogicticssystem.dtos.request.ProductCreateRequest
 import com.overcode250204.smartlogicticssystem.dtos.request.ProductUpdateRequest;
 import com.overcode250204.smartlogicticssystem.dtos.response.ProductResponseDTO;
 import com.overcode250204.smartlogicticssystem.entities.Product;
+import com.overcode250204.smartlogicticssystem.entities.ProductCategory;
 import com.overcode250204.smartlogicticssystem.entities.Supplier;
 import com.overcode250204.smartlogicticssystem.exception.AppException;
+import com.overcode250204.smartlogicticssystem.exception.CategoryErrorCode;
 import com.overcode250204.smartlogicticssystem.exception.ProductErrorCode;
 import com.overcode250204.smartlogicticssystem.exception.SupplierErrorCode;
 import com.overcode250204.smartlogicticssystem.mapper.ProductMapper;
+import com.overcode250204.smartlogicticssystem.repositories.ProductCategoryRepository;
 import com.overcode250204.smartlogicticssystem.repositories.ProductRepository;
 import com.overcode250204.smartlogicticssystem.repositories.SupplierRepository;
 import com.overcode250204.smartlogicticssystem.services.IProductService;
@@ -27,6 +30,7 @@ public class ProductService extends BaseServiceImpl implements IProductService {
 
     private final ProductRepository productRepository;
     private final SupplierRepository supplierRepository;
+    private final ProductCategoryRepository productCategoryRepository;
     private final ProductMapper productMapper;
 
     @Override
@@ -46,14 +50,16 @@ public class ProductService extends BaseServiceImpl implements IProductService {
     @Override
     @Transactional
     public ProductResponseDTO create(ProductCreateRequest request, int roleId, int userId) {
-
-
         Supplier supplier = findByIdOrThrow(supplierRepository, request.getSupplierId(),
                 SupplierErrorCode.SUPPLIER_NOT_FOUND);
+
+        ProductCategory category = findByIdOrThrow(productCategoryRepository, request.getCategoryId(),
+                CategoryErrorCode.CATEGORY_NOT_FOUND);
 
         Product product = productMapper.toEntity(request);
         product.setProductCode(UUID.randomUUID().toString());
         product.setSupplier(supplier);
+        product.setCategory(category);
 
         return productMapper.toResponse(productRepository.save(product));
     }
@@ -71,8 +77,12 @@ public class ProductService extends BaseServiceImpl implements IProductService {
         Supplier supplier = findByIdOrThrow(supplierRepository, request.getSupplierId(),
                 SupplierErrorCode.SUPPLIER_NOT_FOUND);
 
+        ProductCategory category = findByIdOrThrow(productCategoryRepository, request.getCategoryId(),
+                CategoryErrorCode.CATEGORY_NOT_FOUND);
+
         productMapper.updateEntity(request, product);
         product.setSupplier(supplier);
+        product.setCategory(category);
 
         return productMapper.toResponse(productRepository.save(product));
     }

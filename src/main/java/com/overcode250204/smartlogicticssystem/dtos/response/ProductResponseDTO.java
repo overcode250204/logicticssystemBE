@@ -20,4 +20,5 @@ public class ProductResponseDTO {
     private BigDecimal price;
     private Integer minStockLevel;
     private SupplierResponseDTO supplier;
+    private ProductCategoryResponseDTO category;
 }

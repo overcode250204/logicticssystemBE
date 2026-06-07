@@ -27,6 +27,14 @@ public class Product {
     @Column(name = "productname", nullable = false, length = 150)
     private String productName;
 
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "categoryid", nullable = false)
+    private ProductCategory category;
+
+    @Column(name = "weight", precision = 10, scale = 3)
+    private BigDecimal weight;
+
     @Column(name = "minstocklevel")
     private Integer minStockLevel = 10;
 
