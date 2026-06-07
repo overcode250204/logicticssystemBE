@@ -2,20 +2,21 @@ package com.overcode250204.smartlogicticssystem.services.impls;
 
 
 import com.overcode250204.smartlogicticssystem.dtos.request.delivery.IncidentReportDTO;
-import com.overcode250204.smartlogicticssystem.dtos.request.delivery.OrderItemDTO;
-import com.overcode250204.smartlogicticssystem.dtos.request.delivery.OrderRequestDTO;
 import com.overcode250204.smartlogicticssystem.entities.*;
 import com.overcode250204.smartlogicticssystem.repositories.*;
+import com.overcode250204.smartlogicticssystem.routing.RoutingEngine;
+import com.overcode250204.smartlogicticssystem.routing.domain.DepotSetting;
+import com.overcode250204.smartlogicticssystem.routing.domain.Driver;
+import com.overcode250204.smartlogicticssystem.routing.domain.OrderPlaning;
+import com.overcode250204.smartlogicticssystem.routing.domain.RoutePlanSolution;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.GeometryFactory;
-import org.locationtech.jts.geom.Point;
 import org.locationtech.jts.geom.PrecisionModel;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -28,59 +29,11 @@ public class DeliveryService {
     private final RoutePointRepository routePointRepository;
     private final DeliveryLogRepository deliveryLogRepository;
     private final UserRepository userRepository;
-    private final ShipperRepository shipperRepository;
+    private final DriverProfileRepository driverProfileRepository;
     private final ZoneRepository zoneRepository;
     private final GeometryFactory geometryFactory = new GeometryFactory(new PrecisionModel(), 4326);
+    private final RoutingEngine routingEngine;
 
-    /**
-     * WORKFLOW 1: KHÁCH HÀNG BẤM ĐẶT HÀNG -> TẠO ĐƠN PENDING
-     */
-    @Transactional
-    public OrderRequestDTO placeOrder(OrderRequestDTO request) {
-
-        //Kiểm tra customer
-        User customer = userRepository.findById(request.getCustomerId()).orElseThrow(() -> new RuntimeException("User does not exist!"));
-
-        // Chuyển đổi tọa độ GPS từ Flutter gửi lên
-        Point customerLocation = geometryFactory.createPoint(new Coordinate(request.getLongitude(), request.getLatitude()));
-
-        Zone zone = zoneRepository.findAreaContainingPoint(request.getLongitude(), request.getLatitude()).orElseThrow(() -> new RuntimeException("Not support this address!"));
-
-
-        // Tạo nhanh đơn hàng ở trạng thái PENDING
-        Order order = Order.builder()
-                .customer(customer)
-                .deliveryAddress(request.getDeliveryAddress())
-                .deliveryLocation(customerLocation)
-                .status("PENDING")
-                .zone(zone)
-                .totalAmount(new BigDecimal("000.00"))
-                .items(new ArrayList<>())
-                .build();
-
-        // Lưu chi tiết các sản phẩm trong đơn hàng
-        for (OrderItemDTO itemDto : request.getItems()) {
-            Product product = productRepository.findById(itemDto.getProductId())
-                    .orElseThrow(() -> new RuntimeException("Product does not exist!"));
-
-            OrderItem orderItem = OrderItem.builder()
-                    .order(order)
-                    .product(product)
-                    .quantity(itemDto.getQuantity())
-                    .price(product.getPrice())
-                    .build();
-
-            order.getItems().add(orderItem);
-            order.setTotalAmount(order.getTotalAmount().add(calculateTotalAmount(orderItem.getPrice(), orderItem.getQuantity())));
-        }
-        order = orderRepository.save(order);
-        return request;
-    }
-
-    private BigDecimal calculateTotalAmount(BigDecimal price, Integer quantity){
-        BigDecimal quantityBig = BigDecimal.valueOf(quantity);
-        return price.multiply(quantityBig);
-    }
 
     /**
      * WORKFLOW 2: HỆ THỐNG GOM ĐƠN TỐI ƯU -> TRỪ KHO THỰC TẾ KHI XÁC NHẬN ĐÓNG GÓI
@@ -89,12 +42,12 @@ public class DeliveryService {
     public OrderBatch createOptimizedBatch(Long shipperId, List<Long> orderedOrderIds) {
 
 
-        Shipper shipper = shipperRepository.findById(shipperId).orElseThrow(() -> new RuntimeException("Shipper does not exist!"));
+        DriverProfile driverProfile = driverProfileRepository.findById(shipperId).orElseThrow(() -> new RuntimeException("Shipper does not exist!"));
 
         OrderBatch batch = new OrderBatch();
-        batch.setShipper(shipper);
+        batch.setDriverProfile(driverProfile);
         batch.setStatus("ASSIGNED");
-        batch.setOptimizedAt(LocalDateTime.now());
+//        batch.setOptimizedAt(LocalDateTime.now());
 
         batch = batchRepository.save(batch);
 
@@ -143,7 +96,7 @@ public class DeliveryService {
         for (RoutePoint rp : batch.getRoutePoints()) {
             Order order = rp.getOrder();
 
-            saveDeliveryLog(order, batch.getShipper(), order.getStatus(), "IN_TRANSIT", "STATUS_CHANGE", "Shipper đã lấy hàng.", "not image");
+            saveDeliveryLog(order, batch.getDriverProfile(), order.getStatus(), "IN_TRANSIT", "STATUS_CHANGE", "Shipper đã lấy hàng.", "not image");
 
             order.setStatus("IN_TRANSIT");
             orderRepository.save(order);
@@ -157,24 +110,24 @@ public class DeliveryService {
     public void updateRoutePointStatus(Long routePointId, String targetStatus, IncidentReportDTO incident) {
         RoutePoint rp = routePointRepository.findById(routePointId).orElseThrow();
         Order order = rp.getOrder();
-        Shipper shipper = rp.getBatch().getShipper();
+        DriverProfile driverProfile = rp.getBatch().getDriverProfile();
         String previousStatus = order.getStatus();
 
         if ("ARRIVED".equals(targetStatus)) {
-            rp.setActualArrivalTime(LocalDateTime.now());
+//            rp.setActualArrivalTime(LocalDateTime.now());
             rp.setStatus("ARRIVED");
         }
         else if ("DELIVERED".equals(targetStatus)) {
             rp.setStatus("COMPLETED");
             order.setStatus("DELIVERED");
-            saveDeliveryLog(order, shipper, previousStatus, "DELIVERED", "STATUS_CHANGE", "Giao hàng thành công.", "");
+            saveDeliveryLog(order, driverProfile, previousStatus, "DELIVERED", "STATUS_CHANGE", "Giao hàng thành công.", "");
         }
         else if ("FAILED".equals(targetStatus)) {
             rp.setStatus("FAILED");
             order.setStatus("FAILED");
 
             // Giao thất bại -> Lưu lý do phát sinh của shipper
-            saveDeliveryLog(order, shipper, previousStatus, "FAILED", "INCIDENT", incident.getNote(), incident.getImageUrl());
+            saveDeliveryLog(order, driverProfile, previousStatus, "FAILED", "INCIDENT", incident.getNote(), incident.getImageUrl());
 
             // TÙY CHỌN NGHIỆP VỤ: Nếu giao thất bại, hàng phải hoàn về kho,  cộng lại kho thực tế ở đây
             // Hoặc đợi khi shipper cầm hàng về đến kho, thủ kho bấm "Xác nhận hoàn hàng" thì mới cộng lại kho sau.
@@ -184,10 +137,10 @@ public class DeliveryService {
         routePointRepository.save(rp);
     }
 
-    private void saveDeliveryLog(Order order, Shipper shipper, String fromStatus, String toStatus, String type, String note, String imageUrl  ) {
+    private void saveDeliveryLog(Order order, DriverProfile driverProfile, String fromStatus, String toStatus, String type, String note, String imageUrl  ) {
         DeliveryLog log = DeliveryLog.builder()
                 .order(order)
-                .shipper(shipper)
+                .driverProfile(driverProfile)
                 .fromStatus(fromStatus)
                 .toStatus(toStatus)
                 .logType(type)
@@ -196,4 +149,56 @@ public class DeliveryService {
                 .build();
         deliveryLogRepository.save(log);
     }
+
+    public RoutePlanSolution executeRouting(){
+        DepotSetting depot = DepotSetting.builder()
+                .id(1L)
+                .location(geometryFactory.createPoint(new Coordinate( 106.80071256657389,10.875405129142845)))
+                .build();
+        List<DriverProfile> driverProfiles = driverProfileRepository.findAll();
+        List<Driver> drivers = driverProfiles.stream().map((x) -> Driver.builder().id(x.getId()).maxWeightCapacity(x.getMaxWeightCapacity()).depot(depot).orderPlaningList(new ArrayList<>()).build()).toList();
+        List<Order> ordersE = orderRepository.findAll();
+        List<OrderPlaning> orderPlannings = ordersE.stream().map((x) -> OrderPlaning.builder().id(x.getId()).destination(x.getDeliveryLocation()).weightKg(x.getTotalWeight().doubleValue()).build()).toList();
+        RoutePlanSolution solvedSolution = routingEngine.executeRouting(depot,drivers, orderPlannings);
+
+        // lấy data từ solver để lưu db
+        for (Driver driver : solvedSolution.getDriverList()) {
+            List<OrderPlaning> assignedOrderPlanings = driver.getOrderPlaningList();
+
+            if (assignedOrderPlanings.isEmpty()) {
+                continue;
+            }
+
+            DriverProfile dp = driverProfileRepository.findById(driver.getId()).orElseThrow(() -> new RuntimeException("Driver profile does not exist!"));
+            OrderBatch orderBatch = OrderBatch.builder()
+                    .driverProfile(dp)
+                    .routePoints(new ArrayList<>())
+                    .totalWeight(new BigDecimal(0))
+                    .build();
+
+            for (int index = 0; index < assignedOrderPlanings.size(); index++) {
+                OrderPlaning orderPlaning = assignedOrderPlanings.get(index);
+
+//                System.out.printf("Thứ tự dừng [%d]: Đơn hàng ID %d (Trọng lượng: %.2f kg)\n",
+//                        index + 1, orderPlaning.getId(), orderPlaning.getWeightKg());
+                Order order = orderRepository.findById(orderPlaning.getId()).orElseThrow();
+                int sequence = index + 1;
+                RoutePoint point = RoutePoint.builder()
+                        .order(order)
+                        .batch(orderBatch)
+                        .sequenceNumber(sequence)
+                        .build();
+                BigDecimal totalWeightKg = orderBatch.getTotalWeight().add(new BigDecimal(orderPlaning.getWeightKg()));
+                orderBatch.setTotalWeight(totalWeightKg);
+                orderBatch.getRoutePoints().add(point);
+            }
+
+            orderBatch = batchRepository.save(orderBatch);
+
+        }
+
+        return null;
+    }
+
+
 }

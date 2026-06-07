@@ -24,12 +24,12 @@ public class RoutePoint {
 
     @Column(name = "sequencenumber", nullable = false)
     private Integer sequenceNumber; // 1, 2, 3... Thứ tự di chuyển hiển thị lên App Shipper
+//
+//    @Column(name = "estimatedarrivaltime")
+//    private LocalDateTime estimatedArrivalTime; // Thời gian dự kiến đến (ETA)
 
-    @Column(name = "estimatedarrivaltime")
-    private LocalDateTime estimatedArrivalTime; // Thời gian dự kiến đến (ETA)
-
-    @Column(name = "actualarrivaltime")
-    private LocalDateTime actualArrivalTime; // Lưu lại khi shipper bấm nút "Đã đến nơi" trên App
+//    @Column(name = "actualarrivaltime")
+//    private LocalDateTime actualArrivalTime; // Lưu lại khi shipper bấm nút "Đã đến nơi" trên App
 
     @Column(length = 30)
     private String status = "TODO"; // TODO (Chưa đi), ARRIVED (Đã đến), COMPLETED (Xong), FAILED (Lỗi)

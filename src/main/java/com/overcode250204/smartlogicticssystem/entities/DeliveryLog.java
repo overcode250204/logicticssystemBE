@@ -1,7 +1,5 @@
 package com.overcode250204.smartlogicticssystem.entities;
 
-import com.overcode250204.smartlogicticssystem.entities.Order;
-import com.overcode250204.smartlogicticssystem.entities.Shipper;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -21,7 +19,7 @@ public class DeliveryLog {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "shipperid")
-    private Shipper shipper;
+    private DriverProfile driverProfile;
 
     @Column(name = "fromstatus", length = 50)
     private String fromStatus; // Trạng thái trước khi đổi

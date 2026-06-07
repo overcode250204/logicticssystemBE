@@ -26,6 +26,9 @@ public class Order {
     @Column(name = "totalamount", nullable = false, precision = 12, scale = 2)
     private BigDecimal totalAmount;
 
+    @Column(name = "totalweight", nullable = false, precision = 12, scale = 2)
+    private BigDecimal totalWeight;
+
     @Column(name = "destinationaddress", nullable = false, columnDefinition = "TEXT")
     private String deliveryAddress;
 

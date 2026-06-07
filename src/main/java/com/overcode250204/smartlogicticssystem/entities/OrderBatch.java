@@ -5,6 +5,7 @@ import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -22,13 +23,16 @@ public class OrderBatch {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "shipperid")
-    private Shipper shipper; // Shipper được gán cụm đơn gom này
+    private DriverProfile driverProfile; // Shipper được gán cụm đơn gom này
 
     @Column(length = 30)
     private String status = "ASSIGNED"; // ASSIGNED, PACKING, PICKED_UP, COMPLETED
 
-    @Column(name = "optimizedat")
-    private LocalDateTime optimizedAt; // Thời điểm thuật toán chạy tối ưu sắp xếp
+    @Column(name = "totalweight", nullable = false, precision = 12, scale = 2)
+    private BigDecimal totalWeight;
+//
+//    @Column(name = "optimizedat")
+//    private LocalDateTime optimizedAt; // Thời điểm thuật toán chạy tối ưu sắp xếp
 
     @CreationTimestamp
     @Column(name = "createdat", updatable = false)

@@ -124,7 +124,7 @@
             <artifactId>jackson-datatype-jts</artifactId>
             <version>1.2.1</version>
         </dependency>
-<!--        use to handle optimized Routing and batch order for shipper-->
+<!--        use to handle optimized Routing and batch orderPlaning for driverProfile-->
         <dependency>
             <groupId>ai.timefold.solver</groupId>
             <artifactId>timefold-solver-core</artifactId>

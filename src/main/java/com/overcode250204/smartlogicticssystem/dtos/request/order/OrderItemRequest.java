@@ -6,7 +6,7 @@ import lombok.Setter;
 
 @Setter
 @Getter
-public class OrderItemCreateRequest {
+public class OrderItemRequest {
 
     private Long productId;
 

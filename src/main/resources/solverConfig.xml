@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<solver xmlns="https://timefold.ai/xsd/solver" >
+    <solutionClass>com.overcode250204.smartlogicticssystem.routing.domain.RoutePlanSolution</solutionClass>
+    <entityClass>com.overcode250204.smartlogicticssystem.routing.domain.Driver</entityClass>
+
+    <scoreDirectorFactory>
+        <constraintProviderClass>com.overcode250204.smartlogicticssystem.routing.solver.RouteConstraintProvider</constraintProviderClass>
+    </scoreDirectorFactory>
+
+    <termination>
+        <secondsSpentLimit>5</secondsSpentLimit>
+    </termination>
+</solver>

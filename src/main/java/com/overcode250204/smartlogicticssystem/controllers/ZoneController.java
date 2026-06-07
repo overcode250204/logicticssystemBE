@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class ZoneController extends BaseCrudController<ZoneRequestDTO, Long> {
     private final IZoneService zoneService;
 
-    protected ZoneController( IZoneService service) {
+    protected ZoneController(IZoneService service) {
         super(service);
         this.zoneService = service;
     }

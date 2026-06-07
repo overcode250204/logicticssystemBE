@@ -6,6 +6,7 @@ import java.util.List;
 
 @Data
 public class ZoneRequestDTO {
+    private Long id;
     private String name;
     private List<PointDTO> coordinates;
 }
