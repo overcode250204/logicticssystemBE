@@ -21,9 +21,9 @@ public class Shipper {
     @Column(name = "maxweightcapacity")
     private Integer maxWeightCapacity = 30000;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "homezoneid")
-    private Zone homeZone;
+//    @ManyToOne(fetch = FetchType.LAZY)
+//    @JoinColumn(name = "homezoneid")
+//    private Zone homeZone;
 
     @Column(length = 30)
     private String status = "ACTIVE";// ACTIVE, INACTIVE, SUSPENDED
