@@ -31,4 +31,7 @@ public class ProductUpdateRequest {
 
     @NotNull(message = ProductErrorCode.Messages.SUPPLIER_ID_REQUIRED)
     private Integer supplierId;
+
+    @NotNull(message = "Category ID is required")
+    private Long categoryId;
 }

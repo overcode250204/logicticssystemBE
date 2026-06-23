@@ -28,3 +28,8 @@ aws:
 
 #server:
 #  address: 0.0.0.0
+
+firebase:
+  config-path: "firebase-service-account.json"
+
+

@@ -15,6 +15,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.Map;
+
 @RestController
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
@@ -22,7 +24,7 @@ public class AuthController extends BaseController {
 
     private final AuthService authService;
 
-    @PostMapping("/login")
+    @PostMapping("/v1/login")
     public ResponseEntity<BaseResponse<UserDTO>> login(@RequestBody @Valid LoginDTO loginDTO) {
         UserDTO response = authService.login(loginDTO.getEmail(), loginDTO.getPassword());
         return success(response, "Login Successful");
@@ -33,6 +35,13 @@ public class AuthController extends BaseController {
         UserDTO response = authService.registerDriver(userDTO);
         return success(response, "Driver Register Successful");
     }
+
+    @PostMapping("/v2/login")
+    public ResponseEntity<BaseResponse<UserDTO>> login(@RequestBody @Valid UserDTO userDTO) {
+        UserDTO response = authService.loginWithFirebase(userDTO);
+        return ResponseEntity.ok(BaseResponse.success(response, "Login Successful"));
+    }
+
 
 
 }
