@@ -1,0 +1,5 @@
+package com.overcode250204.smartlogicticssystem.enums;
+
+public enum OrderStatus {
+    NEW, READY_TO_PICK, IN_TRANSIT_LINEHAUL, ARRIVED_AT_HUB, IN_TRANSIT_LOCAL, DELIVERED, FAILED
+}

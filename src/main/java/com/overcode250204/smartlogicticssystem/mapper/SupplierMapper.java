@@ -31,6 +31,9 @@ public class SupplierMapper {
         return SupplierResponseDTO.builder()
                 .supplierId(supplier.getSupplierId())
                 .supplierName(supplier.getSupplierName())
+                .contactPhone(supplier.getContactPhone())
+                .address(supplier.getAddress())
+                .createdAt(supplier.getCreatedAt())
                 .build();
     }
 

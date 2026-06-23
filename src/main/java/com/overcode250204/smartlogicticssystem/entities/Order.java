@@ -1,8 +1,11 @@
 package com.overcode250204.smartlogicticssystem.entities;
 
+import com.overcode250204.smartlogicticssystem.enums.OrderStatus;
+import com.overcode250204.smartlogicticssystem.enums.PaymentType;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
+import org.locationtech.jts.geom.Point;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -12,24 +15,52 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "orders")
 public class Order {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "orderid")
+    @Column(name = "order_id")
     private Long orderId;
 
+    @Column(name = "order_code", unique = true, length = 20)
+    private String orderCode;
+
+    @Column(name = "barcode_url")
+    private String barcodeUrl;
+
+    @Column(name = "customer_name", nullable = false, length = 100)
+    private String customerName;
+
+    @Column(name = "phone", nullable = false, length = 15)
+    private String phone;
+
+    @Column(name = "delivery_address", columnDefinition = "TEXT", nullable = false)
+    private String deliveryAddress;
+
+    @Column(name = "delivery_province", nullable = false, length = 50)
+    private String deliveryProvince;
+
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "driverid")
-    private User driver;
+    @JoinColumn(name = "assigned_hub_id")
+    private Warehouse assignedHub;
 
-    @Column(name = "destinationaddress", nullable = false)
-    private String destinationAddress;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "route_id")
+    private RouteConfig routeConfig;
 
-    @Column(name = "orderstatus")
-    private String orderStatus = "Pending";
+    @Column(name = "total_amount", nullable = false)
+    private BigDecimal totalAmount;
 
-    @Column(name = "totalweight")
-    private BigDecimal totalWeight;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "payment_type", length = 20)
+    private PaymentType paymentType;
 
-    @Column(name = "createdat", updatable = false)
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", length = 30)
+    private OrderStatus status = OrderStatus.NEW;
+
+    @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt = LocalDateTime.now();
+
+    @Column(name = "delivery_point", columnDefinition = "geometry(Point, 4326)")
+    private Point deliveryPoint;
 }

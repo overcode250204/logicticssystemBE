@@ -4,6 +4,7 @@ import com.google.zxing.BarcodeFormat;
 import com.google.zxing.EncodeHintType;
 import com.google.zxing.common.BitMatrix;
 import com.google.zxing.oned.EAN13Writer;
+import com.google.zxing.oned.Code128Writer;
 import com.overcode250204.smartlogicticssystem.exception.AppException;
 import com.overcode250204.smartlogicticssystem.exception.StorageErrorCode;
 
@@ -107,6 +108,64 @@ public final class BarcodeGeneratorUtil {
         public GeneratedBarcode {
             if (barcode == null || !barcode.matches("\\d{%d}".formatted(BARCODE_LENGTH))) {
                 throw new IllegalArgumentException("EAN-13 barcode must contain exactly 13 numeric digits");
+            }
+            if (pngBytes == null || pngBytes.length == 0) {
+                throw new IllegalArgumentException("Barcode image bytes must not be empty");
+            }
+        }
+    }
+
+    public static GeneratedCode128Barcode generateCode128Barcode(String data) {
+        if (data == null || data.isBlank()) {
+            throw new IllegalArgumentException("Code 128 barcode data must not be empty");
+        }
+        return new GeneratedCode128Barcode(data, renderCode128Png(data));
+    }
+
+    private static byte[] renderCode128Png(String barcode) {
+        try {
+            BitMatrix bitMatrix = new Code128Writer().encode(
+                    barcode,
+                    BarcodeFormat.CODE_128,
+                    IMAGE_WIDTH - (PADDING * 2),
+                    BARCODE_HEIGHT,
+                    Map.of(EncodeHintType.MARGIN, 0)
+            );
+
+            int imageHeight = BARCODE_HEIGHT + TEXT_HEIGHT + (PADDING * 2);
+            BufferedImage image = new BufferedImage(IMAGE_WIDTH, imageHeight, BufferedImage.TYPE_INT_RGB);
+            Graphics2D graphics = image.createGraphics();
+            try {
+                graphics.setColor(Color.WHITE);
+                graphics.fillRect(0, 0, IMAGE_WIDTH, imageHeight);
+                graphics.setColor(Color.BLACK);
+
+                int barcodeX = (IMAGE_WIDTH - bitMatrix.getWidth()) / 2;
+                for (int x = 0; x < bitMatrix.getWidth(); x++) {
+                    for (int y = 0; y < bitMatrix.getHeight(); y++) {
+                        if (bitMatrix.get(x, y)) {
+                            graphics.fillRect(barcodeX + x, PADDING + y, 1, 1);
+                        }
+                    }
+                }
+
+                drawHumanReadableText(graphics, barcode, imageHeight);
+            } finally {
+                graphics.dispose();
+            }
+
+            ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+            ImageIO.write(image, PNG_FORMAT, outputStream);
+            return outputStream.toByteArray();
+        } catch (IOException e) {
+            throw new AppException(StorageErrorCode.BARCODE_GENERATION_FAILED);
+        }
+    }
+
+    public record GeneratedCode128Barcode(String barcode, byte[] pngBytes) {
+        public GeneratedCode128Barcode {
+            if (barcode == null || barcode.isBlank()) {
+                throw new IllegalArgumentException("Barcode must not be empty");
             }
             if (pngBytes == null || pngBytes.length == 0) {
                 throw new IllegalArgumentException("Barcode image bytes must not be empty");
