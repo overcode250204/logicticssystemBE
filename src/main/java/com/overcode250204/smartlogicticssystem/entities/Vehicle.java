@@ -29,6 +29,15 @@ public class Vehicle {
     @Column(name = "max_weight_kg", nullable = false)
     private BigDecimal maxWeightKg;
 
+    @Column(name = "length", precision = 10, scale = 3)
+    private BigDecimal cargoLength;
+
+    @Column(name = "width", precision = 10, scale = 3)
+    private BigDecimal cargoWidth;
+
+    @Column(name = "height", precision = 10, scale = 3)
+    private BigDecimal cargoHeight;
+
     @Column(name = "max_volume_m3", nullable = false)
     private BigDecimal maxVolumeM3;
 

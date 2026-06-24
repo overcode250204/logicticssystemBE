@@ -33,5 +33,9 @@ public enum ProductErrorCode implements BaseErrorCode {
         public static final String PRICE_REQUIRED = "Price is required";
         public static final String PRICE_POSITIVE = "Price must be positive";
         public static final String SUPPLIER_ID_REQUIRED = "Supplier ID is required";
+        public static final String WEIGHT_REQUIRED = "Weight is required";
+        public static final String WEIGHT_POSITIVE = "Weight must be positive";
     }
 }
+
+//TODO: add error code for new properties of Product

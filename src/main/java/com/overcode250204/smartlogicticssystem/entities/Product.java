@@ -27,7 +27,6 @@ public class Product {
     @Column(name = "productname", nullable = false, length = 150)
     private String productName;
 
-
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "categoryid", nullable = false)
     private ProductCategory category;
@@ -35,9 +34,26 @@ public class Product {
     @Column(name = "weight", precision = 10, scale = 3)
     private BigDecimal weight;
 
+    @Column(name = "sku", unique = true, length = 50)
+    private String sku;
+
+    @Column(name = "length", precision = 10, scale = 3)
+    private BigDecimal length;
+
+    @Column(name = "width", precision = 10, scale = 3)
+    private BigDecimal width;
+
+    @Column(name = "height", precision = 10, scale = 3)
+    private BigDecimal height;
+
+    @ManyToOne
+    @JoinColumn(name = "base_unit_id")
+    private Unit baseUnit;
+
     @Column(name = "minstocklevel")
     private Integer minStockLevel = 10;
 
     @Column(name = "price", nullable = false)
     private BigDecimal price;
+
 }

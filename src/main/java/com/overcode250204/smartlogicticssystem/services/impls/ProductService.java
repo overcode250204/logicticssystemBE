@@ -7,6 +7,7 @@ import com.overcode250204.smartlogicticssystem.dtos.response.ProductResponseDTO;
 import com.overcode250204.smartlogicticssystem.entities.Product;
 import com.overcode250204.smartlogicticssystem.entities.ProductCategory;
 import com.overcode250204.smartlogicticssystem.entities.Supplier;
+import com.overcode250204.smartlogicticssystem.entities.Unit;
 import com.overcode250204.smartlogicticssystem.exception.AppException;
 import com.overcode250204.smartlogicticssystem.exception.CategoryErrorCode;
 import com.overcode250204.smartlogicticssystem.exception.ProductErrorCode;
@@ -15,6 +16,7 @@ import com.overcode250204.smartlogicticssystem.mapper.ProductMapper;
 import com.overcode250204.smartlogicticssystem.repositories.ProductCategoryRepository;
 import com.overcode250204.smartlogicticssystem.repositories.ProductRepository;
 import com.overcode250204.smartlogicticssystem.repositories.SupplierRepository;
+import com.overcode250204.smartlogicticssystem.repositories.UnitRepository;
 import com.overcode250204.smartlogicticssystem.services.IProductService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -31,6 +33,7 @@ public class ProductService extends BaseServiceImpl implements IProductService {
     private final ProductRepository productRepository;
     private final SupplierRepository supplierRepository;
     private final ProductCategoryRepository productCategoryRepository;
+    private final UnitRepository unitRepository;
     private final ProductMapper productMapper;
 
     @Override
@@ -61,6 +64,13 @@ public class ProductService extends BaseServiceImpl implements IProductService {
         product.setSupplier(supplier);
         product.setCategory(category);
 
+        // Resolve base unit if provided
+        if (request.getBaseUnitId() != null) {
+            Unit baseUnit = unitRepository.findById(request.getBaseUnitId())
+                    .orElseThrow(() -> new AppException(ProductErrorCode.PRODUCT_NOT_FOUND));
+            product.setBaseUnit(baseUnit);
+        }
+
         return productMapper.toResponse(productRepository.save(product));
     }
 
@@ -83,6 +93,13 @@ public class ProductService extends BaseServiceImpl implements IProductService {
         productMapper.updateEntity(request, product);
         product.setSupplier(supplier);
         product.setCategory(category);
+
+        // Resolve base unit if provided
+        if (request.getBaseUnitId() != null) {
+            Unit baseUnit = unitRepository.findById(request.getBaseUnitId())
+                    .orElseThrow(() -> new AppException(ProductErrorCode.PRODUCT_NOT_FOUND));
+            product.setBaseUnit(baseUnit);
+        }
 
         return productMapper.toResponse(productRepository.save(product));
     }
