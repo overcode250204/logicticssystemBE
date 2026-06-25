@@ -21,6 +21,10 @@ public class OrderItem {
     @JoinColumn(name = "order_id")
     private Order order;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "product_id")
+    private Product product;
+
     @Column(name = "product_name", nullable = false, length = 150)
     private String productName;
 
@@ -38,4 +42,7 @@ public class OrderItem {
 
     @Column(name = "volume_m3", nullable = false)
     private BigDecimal volumeM3;
+
+    @Column(name = "total_amount", nullable = false)
+    private BigDecimal totalAmount;
 }

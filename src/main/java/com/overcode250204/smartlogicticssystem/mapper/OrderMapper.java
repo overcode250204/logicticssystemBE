@@ -51,6 +51,8 @@ public class OrderMapper {
                 .status(entity.getStatus())
                 .createdAt(entity.getCreatedAt())
                 .items(itemDTOs)
+                .totalWeightKg(entity.getTotalWeightKg())
+                .totalVolumeM3(entity.getTotalVolumeM3())
                 .build();
     }
 

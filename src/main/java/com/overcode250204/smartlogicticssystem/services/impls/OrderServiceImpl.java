@@ -4,19 +4,13 @@ import com.overcode250204.smartlogicticssystem.base.BaseServiceImpl;
 import com.overcode250204.smartlogicticssystem.dtos.request.OrderCreateRequest;
 import com.overcode250204.smartlogicticssystem.dtos.request.OrderItemRequest;
 import com.overcode250204.smartlogicticssystem.dtos.response.OrderResponseDTO;
-import com.overcode250204.smartlogicticssystem.entities.Order;
-import com.overcode250204.smartlogicticssystem.entities.OrderItem;
-import com.overcode250204.smartlogicticssystem.entities.Product;
-import com.overcode250204.smartlogicticssystem.entities.RouteProvince;
+import com.overcode250204.smartlogicticssystem.entities.*;
 import com.overcode250204.smartlogicticssystem.events.OrderCreatedEvent;
 import com.overcode250204.smartlogicticssystem.exception.AppException;
 import com.overcode250204.smartlogicticssystem.exception.OrderErrorCode;
 import com.overcode250204.smartlogicticssystem.exception.RoleErrorCode;
 import com.overcode250204.smartlogicticssystem.mapper.OrderMapper;
-import com.overcode250204.smartlogicticssystem.repositories.OrderItemRepository;
-import com.overcode250204.smartlogicticssystem.repositories.OrderRepository;
-import com.overcode250204.smartlogicticssystem.repositories.ProductRepository;
-import com.overcode250204.smartlogicticssystem.repositories.RouteProvinceRepository;
+import com.overcode250204.smartlogicticssystem.repositories.*;
 import com.overcode250204.smartlogicticssystem.services.IOrderService;
 import com.overcode250204.smartlogicticssystem.services.S3FileService;
 import com.overcode250204.smartlogicticssystem.utils.BarcodeGeneratorUtil;
@@ -29,6 +23,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
@@ -45,6 +40,7 @@ public class OrderServiceImpl extends BaseServiceImpl implements IOrderService {
     private final ApplicationEventPublisher eventPublisher;
     private final S3FileService s3FileService;
     private final GeometryFactory geometryFactory = new GeometryFactory();
+    private final ZoneRepository zoneRepository;
 
     @Override
     @Transactional
@@ -59,6 +55,10 @@ public class OrderServiceImpl extends BaseServiceImpl implements IOrderService {
             throw new AppException(OrderErrorCode.DELIVERY_PROVINCE_UNSUPPORTED);
         }
 
+        //Get zone to GROUP
+        Zone zone = zoneRepository.findAreaContainingPoint(request.getLongitude(), request.getLatitude())
+                .orElseThrow(() -> new AppException(OrderErrorCode.DELIVERY_PROVINCE_UNSUPPORTED));
+
         Order order = new Order();
         order.setCustomerName(request.getCustomerName());
         order.setPhone(request.getPhone());
@@ -67,6 +67,7 @@ public class OrderServiceImpl extends BaseServiceImpl implements IOrderService {
         order.setPaymentType(request.getPaymentType());
         order.setRouteConfig(routeProvince.getRouteConfig());
         order.setAssignedHub(routeProvince.getAssignedHub());
+        order.setZone(zone);
         
         // Generate Order Code
         String orderCode = generateUniqueOrderCode();
@@ -85,41 +86,62 @@ public class OrderServiceImpl extends BaseServiceImpl implements IOrderService {
         order.setDeliveryPoint(deliveryPoint);
 
         BigDecimal totalAmount = BigDecimal.ZERO;
+        BigDecimal totalWeight = BigDecimal.ZERO;
+        BigDecimal totalVolumeM3 = BigDecimal.ZERO;
         List<OrderItem> items = new ArrayList<>();
 
         for (OrderItemRequest itemRequest : request.getItems()) {
             Product product = findByIdOrThrow(productRepository, itemRequest.getProductId(), OrderErrorCode.PRODUCT_NOT_FOUND);
-            
-            OrderItem item = new OrderItem();
-            item.setOrder(order);
-            item.setProductName(product.getProductName());
-            item.setQuantityOrdered(itemRequest.getQuantity());
-            item.setUnitPrice(product.getPrice());
-            
-            // Weight calculation
-            BigDecimal weight = product.getWeight() != null ? product.getWeight() : BigDecimal.ZERO;
-            item.setWeightKg(weight.multiply(new BigDecimal(itemRequest.getQuantity())));
-            
-            // Hardcoded volume as per user specification until Product is modified
-            BigDecimal defaultVolume = new BigDecimal("0.01");
-            item.setVolumeM3(defaultVolume.multiply(new BigDecimal(itemRequest.getQuantity())));
-            
-            totalAmount = totalAmount.add(item.getUnitPrice().multiply(new BigDecimal(itemRequest.getQuantity())));
+
+            OrderItem item = getOrderItem(itemRequest, order, product);
+
+            totalAmount = totalAmount.add(item.getTotalAmount());
+            totalVolumeM3 = totalVolumeM3.add(item.getVolumeM3().multiply(BigDecimal.valueOf(item.getQuantityOrdered())));
+            totalWeight = totalWeight.add(item.getWeightKg().multiply(BigDecimal.valueOf(item.getQuantityOrdered())));
             items.add(item);
         }
 
         order.setTotalAmount(totalAmount);
+        order.setTotalWeightKg(totalWeight);
+        order.setTotalVolumeM3(totalVolumeM3);
         
         Order savedOrder = orderRepository.save(order);
         items = orderItemRepository.saveAll(items);
 
-        // Trigger Routing Engine seamlessly!
+        // Trigger Routing Engine seamlessly
         if (savedOrder.getRouteConfig() != null) {
             eventPublisher.publishEvent(new OrderCreatedEvent(this, savedOrder.getRouteConfig().getRouteId()));
         }
 
         return orderMapper.toResponse(savedOrder, items);
     }
+
+    private  OrderItem getOrderItem(OrderItemRequest itemRequest, Order order, Product product) {
+        OrderItem item = new OrderItem();
+        item.setOrder(order);
+        item.setProductName(product.getProductName());
+        item.setQuantityOrdered(itemRequest.getQuantity());
+        item.setUnitPrice(product.getPrice());
+        item.setWeightKg(product.getWeight());
+        item.setVolumeM3(calculateVolumeM3(product));
+        item.setTotalAmount(calculateTotalAmount(itemRequest.getQuantity(), product.getPrice()));
+        item.setProduct(product);
+        return item;
+    }
+
+    // Calculate Total Amount for Item
+    private BigDecimal calculateTotalAmount(Integer quantity, BigDecimal unitPrice){
+        return unitPrice.multiply(BigDecimal.valueOf(quantity));
+    }
+    // Calculate Volume for Item
+    private BigDecimal calculateVolumeM3(Product product){
+        BigDecimal length = product.getLength() != null ? product.getLength() : BigDecimal.ZERO;
+        BigDecimal width = product.getWidth() != null ? product.getWidth() : BigDecimal.ZERO;
+        BigDecimal height = product.getHeight() != null ? product.getHeight() : BigDecimal.ZERO;
+
+        return  length.multiply(width).multiply(height).divide(new BigDecimal(1000000), RoundingMode.HALF_UP);
+    }
+
 
     private String generateUniqueOrderCode() {
         String code;
@@ -133,8 +155,6 @@ public class OrderServiceImpl extends BaseServiceImpl implements IOrderService {
         } while (orderRepository.existsByOrderCode(code));
         return code;
     }
-
-
 
     private String uploadBarcodeImage(BarcodeGeneratorUtil.GeneratedCode128Barcode generatedBarcode) {
         String key = "%s/%s.png".formatted("order-barcodes", generatedBarcode.barcode());

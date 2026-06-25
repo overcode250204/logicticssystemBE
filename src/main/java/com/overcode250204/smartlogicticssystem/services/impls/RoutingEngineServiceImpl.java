@@ -1,7 +1,9 @@
 package com.overcode250204.smartlogicticssystem.services.impls;
 
 import com.overcode250204.smartlogicticssystem.entities.*;
-import com.overcode250204.smartlogicticssystem.enums.*;
+import com.overcode250204.smartlogicticssystem.enums.LinehaulTripStatus;
+import com.overcode250204.smartlogicticssystem.enums.NotificationType;
+import com.overcode250204.smartlogicticssystem.enums.OrderStatus;
 import com.overcode250204.smartlogicticssystem.repositories.*;
 import com.overcode250204.smartlogicticssystem.services.IRoutingEngineService;
 import com.overcode250204.smartlogicticssystem.services.S3FileService;
@@ -15,7 +17,6 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
-import java.util.HashSet;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -26,7 +27,6 @@ public class RoutingEngineServiceImpl implements IRoutingEngineService {
 
     private final RouteConfigRepository routeConfigRepository;
     private final OrderRepository orderRepository;
-    private final OrderItemRepository orderItemRepository;
     private final LinehaulTripRepository linehaulTripRepository;
     private final PalletRepository palletRepository;
     private final NotificationRepository notificationRepository;
@@ -81,7 +81,7 @@ public class RoutingEngineServiceImpl implements IRoutingEngineService {
 
     private boolean checkHybridWaitTimeCondition(RouteConfig route, List<Order> newOrders) {
         if (route.getMaxWaitingDays() == null || newOrders.isEmpty()) return false;
-        Order oldestOrder = newOrders.get(0);
+        Order oldestOrder = newOrders.getFirst();
         LocalDateTime threshold = oldestOrder.getCreatedAt().plusDays(route.getMaxWaitingDays());
         return LocalDateTime.now().isAfter(threshold);
     }
@@ -89,14 +89,12 @@ public class RoutingEngineServiceImpl implements IRoutingEngineService {
     private boolean checkCapacityCondition(RouteConfig route, List<Order> newOrders) {
         if (route.getDefaultVehicle() == null || route.getMinCapacityPercentage() == null) return false;
 
-        List<OrderItem> items = orderItemRepository.findByOrderIn(newOrders);
-        
-        BigDecimal totalWeight = items.stream()
-                .map(OrderItem::getWeightKg)
+        BigDecimal totalWeight = newOrders.stream()
+                .map(Order::getTotalWeightKg)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        BigDecimal totalVolume = items.stream()
-                .map(OrderItem::getVolumeM3)
+        BigDecimal totalVolume = newOrders.stream()
+                .map(Order::getTotalVolumeM3)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         Vehicle vehicle = route.getDefaultVehicle();
@@ -123,17 +121,16 @@ public class RoutingEngineServiceImpl implements IRoutingEngineService {
     private void triggerPalletization(RouteConfig route, List<Order> eligibleOrders) {
         log.info("Triggering palletization for Route: {}", route.getRouteName());
 
-        // Create Shipment Batch (LinehaulTrip) - TODO FOR ADMIN CREATE FLEXIBLE
+        // Create Shipment Batch (LinehaulTrip) - TODO FOR ADMIN UPDATE FLEXIBLE
         LinehaulTrip trip = new LinehaulTrip();
         trip.setRouteConfig(route);
         trip.setVehicle(route.getDefaultVehicle());
         trip.setStatus(LinehaulTripStatus.PREPARING);
         trip = linehaulTripRepository.save(trip);
 
-        // Update Orders and create Pallet
+        // Update Orders and create empty Pallet
         Pallet pallet = new Pallet();
         pallet.setLinehaulTrip(trip);
-        pallet.setOrders(new HashSet<>(eligibleOrders));
         pallet = palletRepository.save(pallet);
         // Generate Order Code
         String palletCode = generateUniqueOrderCode();
