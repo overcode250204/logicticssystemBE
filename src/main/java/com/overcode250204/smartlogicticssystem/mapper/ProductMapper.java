@@ -35,6 +35,7 @@ public class ProductMapper {
                 .minStockLevel(product.getMinStockLevel())
                 .supplier(supplierMapper.toSimpleResponse(product.getSupplier()))
                 .category(productCategoryMapper.toResponse(product.getCategory()))
+                .imageUrl(product.getImageUrl())
                 .build();
     }
 
@@ -51,6 +52,7 @@ public class ProductMapper {
                 .minStockLevel(product.getMinStockLevel())
                 .weight(product.getWeight())
                 .price(product.getPrice())
+                .imageUrl(product.getImageUrl())
                 .build();
     }
 

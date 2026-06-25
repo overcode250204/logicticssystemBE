@@ -8,6 +8,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.util.UriUtils;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
@@ -15,6 +16,8 @@ import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.S3Exception;
 
 import java.io.IOException;
+import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 
 @Service
@@ -81,6 +84,39 @@ public class S3FileService {
         } catch (S3Exception e) {
             throw new AppException(StorageErrorCode.FILE_DELETE_FAILED);
         }
+    }
+
+    public String extractKeyFromPublicUrl(String publicUrl) {
+        if (!StringUtils.hasText(publicUrl)) {
+            throw new AppException(StorageErrorCode.INVALID_FILE);
+        }
+
+        try {
+            URI uri = URI.create(publicUrl);
+            String expectedHost = "%s.s3.%s.amazonaws.com".formatted(
+                    properties.bucketName(),
+                    properties.region()
+            );
+
+            if (!"https".equalsIgnoreCase(uri.getScheme()) || !expectedHost.equalsIgnoreCase(uri.getHost())) {
+                throw new AppException(StorageErrorCode.INVALID_FILE);
+            }
+
+            String rawPath = uri.getRawPath();
+            if (!StringUtils.hasText(rawPath) || "/".equals(rawPath)) {
+                throw new AppException(StorageErrorCode.INVALID_FILE);
+            }
+
+            return UriUtils.decode(rawPath.replaceFirst("^/+", ""), StandardCharsets.UTF_8);
+        } catch (AppException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new AppException(StorageErrorCode.INVALID_FILE);
+        }
+    }
+
+    public void deleteFileByPublicUrl(String publicUrl) {
+        deleteFile(extractKeyFromPublicUrl(publicUrl));
     }
 
     private String buildPublicUrl(String key) {

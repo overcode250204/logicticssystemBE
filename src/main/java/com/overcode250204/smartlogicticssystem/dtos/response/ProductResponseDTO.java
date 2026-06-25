@@ -27,4 +27,5 @@ public class ProductResponseDTO {
     private Integer minStockLevel;
     private SupplierResponseDTO supplier;
     private ProductCategoryResponseDTO category;
+    private String imageUrl;
 }
