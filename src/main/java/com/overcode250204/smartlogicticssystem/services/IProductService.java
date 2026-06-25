@@ -3,11 +3,17 @@ package com.overcode250204.smartlogicticssystem.services;
 import com.overcode250204.smartlogicticssystem.dtos.request.ProductCreateRequest;
 import com.overcode250204.smartlogicticssystem.dtos.request.ProductUpdateRequest;
 import com.overcode250204.smartlogicticssystem.dtos.response.ProductResponseDTO;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
 public interface IProductService {
+    ProductResponseDTO create(ProductCreateRequest request, MultipartFile image, int roleId, int userId);
+
     ProductResponseDTO create(ProductCreateRequest request, int roleId, int userId);
+
+    ProductResponseDTO update(Long id, ProductUpdateRequest request, MultipartFile image, boolean removeImage,
+            int roleId, int userId);
 
     ProductResponseDTO update(Long id, ProductUpdateRequest request, int roleId, int userId);
 
