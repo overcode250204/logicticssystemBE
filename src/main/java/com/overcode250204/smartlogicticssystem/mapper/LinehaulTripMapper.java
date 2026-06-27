@@ -10,7 +10,7 @@ import org.springframework.stereotype.Component;
 public class LinehaulTripMapper {
     private final VehicleMapper vehicleMapper;
     private final RouteConfigMapper routeConfigMapper;
-    private final DriverMapper driverMapper;
+    private final LinehaulTripDriverMapper driverMapper;
 
 
     public LinehaulTripResponseDTO toResponse(LinehaulTrip entity) {
@@ -22,7 +22,10 @@ public class LinehaulTripMapper {
         return LinehaulTripResponseDTO.builder()
                 .linehaulId(entity.getLinehaulId())
                 .routeConfigResponseDTO(routeConfigMapper.toResponse(entity.getRouteConfig()))
-                .driverResponseDTO(driverMapper.toResponse(entity.getDriver()))
+                .linehaulTripDriverResponseDTO( entity.getTripDrivers() != null ?
+                        entity.getTripDrivers()
+                                .stream()
+                                .map(driverMapper::toResponse).toList() : null)
                 .vehicleResponseDTO(vehicleMapper.toResponse(entity.getVehicle()))
                 .status(entity.getStatus())
                 .departureTime(entity.getDepartureTime())

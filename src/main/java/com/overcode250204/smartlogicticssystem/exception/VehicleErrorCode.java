@@ -7,7 +7,8 @@ import org.springframework.http.HttpStatus;
 @Getter
 public enum VehicleErrorCode implements BaseErrorCode {
     VEHICLE_NOT_FOUND(HttpStatus.NOT_FOUND, Messages.VEHICLE_NOT_FOUND),
-    LICENSE_PLATE_ALREADY_EXISTS(HttpStatus.BAD_REQUEST, Messages.LICENSE_PLATE_ALREADY_EXISTS);
+    LICENSE_PLATE_ALREADY_EXISTS(HttpStatus.BAD_REQUEST, Messages.LICENSE_PLATE_ALREADY_EXISTS),
+    VEHICLE_NOT_ACTIVE(HttpStatus.BAD_REQUEST, Messages.VEHICLE_NOT_ACTIVE);
 
     private final String message;
     private final HttpStatus httpStatus;
@@ -20,5 +21,7 @@ public enum VehicleErrorCode implements BaseErrorCode {
     public static class Messages {
         public static final String VEHICLE_NOT_FOUND = "Vehicle not found";
         public static final String LICENSE_PLATE_ALREADY_EXISTS = "License plate already exists";
+        public static final String VEHICLE_NOT_ACTIVE = "Vehicle is not active";
     }
 }
+

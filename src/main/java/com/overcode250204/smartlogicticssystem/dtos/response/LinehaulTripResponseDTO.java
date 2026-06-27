@@ -5,6 +5,7 @@ import lombok.Builder;
 import lombok.Data;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Data
 @Builder
@@ -16,7 +17,7 @@ public class LinehaulTripResponseDTO {
     private RouteConfigResponseDTO routeConfigResponseDTO;
 
 
-    private DriverResponseDTO driverResponseDTO;
+    private List<LinehaulTripDriverResponseDTO> linehaulTripDriverResponseDTO;
 
 
     private VehicleResponseDTO vehicleResponseDTO;

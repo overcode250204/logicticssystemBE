@@ -6,7 +6,9 @@ import org.springframework.http.HttpStatus;
 
 @Getter
 public enum DriverErrorCode implements BaseErrorCode {
-    DRIVER_NOT_FOUND(HttpStatus.NOT_FOUND, DriverErrorCode.Messages.DRIVER_NOT_FOUND);
+    DRIVER_NOT_FOUND(HttpStatus.NOT_FOUND, DriverErrorCode.Messages.DRIVER_NOT_FOUND),
+    DRIVER_NOT_LINEHAUL(HttpStatus.BAD_REQUEST, DriverErrorCode.Messages.DRIVER_NOT_LINEHAUL),
+    DRIVER_NOT_AVAILABLE(HttpStatus.BAD_REQUEST, DriverErrorCode.Messages.DRIVER_NOT_AVAILABLE);
 
     private final String message;
     private final HttpStatus httpStatus;
@@ -18,5 +20,8 @@ public enum DriverErrorCode implements BaseErrorCode {
 
     public static class Messages {
         public static final String DRIVER_NOT_FOUND = "Driver not found";
+        public static final String DRIVER_NOT_LINEHAUL = "Driver is not a linehaul driver";
+        public static final String DRIVER_NOT_AVAILABLE = "Driver is not available";
     }
 }
+

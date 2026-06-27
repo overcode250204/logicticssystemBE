@@ -6,6 +6,8 @@ import lombok.Getter;
 import lombok.Setter;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Getter
 @Setter
@@ -22,9 +24,12 @@ public class LinehaulTrip {
     @JoinColumn(name = "route_id")
     private RouteConfig routeConfig;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "driver_id")
-    private Driver driver;
+    @OneToMany(
+            mappedBy = "linehaulTrip",
+            cascade = CascadeType.ALL,
+            orphanRemoval = true
+    )
+    private List<LinehaulTripDriver> tripDrivers = new ArrayList<>();
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "vehicle_id")
