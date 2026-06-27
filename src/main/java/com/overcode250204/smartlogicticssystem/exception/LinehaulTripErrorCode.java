@@ -7,7 +7,10 @@ import org.springframework.http.HttpStatus;
 @Getter
 public enum LinehaulTripErrorCode implements BaseErrorCode {
     LINEHAUL_TRIP_NOT_FOUND(HttpStatus.NOT_FOUND, LinehaulTripErrorCode.Messages.LINEHAUL_TRIP_NOT_FOUND),
-    LINEHAUL_TRIP_CAN_NOT_EN_ROUTE(HttpStatus.NOT_FOUND, LinehaulTripErrorCode.Messages.LINEHAUL_TRIP_CAN_NOT_EN_ROUTE);
+    LINEHAUL_TRIP_CAN_NOT_EN_ROUTE(HttpStatus.NOT_FOUND, LinehaulTripErrorCode.Messages.LINEHAUL_TRIP_CAN_NOT_EN_ROUTE),
+    LINEHAUL_TRIP_CAN_NOT_UPDATE(HttpStatus.NOT_FOUND, LinehaulTripErrorCode.Messages.LINEHAUL_TRIP_CAN_NOT_UPDATE),
+    LINEHAUL_TRIP_CAN_NOT_DELETE(HttpStatus.NOT_FOUND, LinehaulTripErrorCode.Messages.LINEHAUL_TRIP_CAN_NOT_DELETE),
+    LINEHAUL_TRIP_CAN_NOT_UPDATE_ROUTE(HttpStatus.NOT_FOUND, LinehaulTripErrorCode.Messages.LINEHAUL_TRIP_CAN_NOT_UPDATE_ROUTE);
 
     private final String message;
     private final HttpStatus httpStatus;
@@ -19,6 +22,9 @@ public enum LinehaulTripErrorCode implements BaseErrorCode {
 
     public static class Messages {
         public static final String LINEHAUL_TRIP_NOT_FOUND = "Linehaul trip not found";
-        public static final String LINEHAUL_TRIP_CAN_NOT_EN_ROUTE = "Linehaul trip can not depart because pallets are creating or is empty";
+        public static final String LINEHAUL_TRIP_CAN_NOT_EN_ROUTE = "Linehaul trip can not depart because pallets are sealing or is empty";
+        public static final String LINEHAUL_TRIP_CAN_NOT_UPDATE = "Linehaul trip can not update because linehaul trip are en route";
+        public static final String LINEHAUL_TRIP_CAN_NOT_DELETE = "Linehaul trip can not delete because linehaul trip are en route";
+        public static final String LINEHAUL_TRIP_CAN_NOT_UPDATE_ROUTE = "Linehaul trip can not update route config because pallets are sealing or created";
     }
 }

@@ -13,13 +13,13 @@ public class LinehaulTripUpdateRequest {
     @Nullable
     private List<LinehaulTripDriverUpdateRequest> linehaulTripDriverUpdateRequests;
 
-    @Nullable
+    @NotNull(message = "Vehicle id id is required")
     private Long vehicleId;
 
     @NotNull(message = "Status is required")
     private LinehaulTripStatus status;
 
-    @Nullable
+    @NotNull(message = "Route id id is required")
     private Long routeId;
 
 }

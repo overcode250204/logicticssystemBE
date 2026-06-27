@@ -28,3 +28,8 @@ public class ProductUnit {
     @Column(name = "conversion_factor", nullable = false, precision = 18, scale = 4)
     private BigDecimal conversionFactor;
 }
+
+
+
+
+

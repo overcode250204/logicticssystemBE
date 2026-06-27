@@ -1,5 +1,6 @@
 package com.overcode250204.smartlogicticssystem.dtos.request;
 
+import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -15,10 +16,10 @@ public class LinehaulTripCreateRequest {
     @Nullable
     private List<LinehaulTripDriverCreateRequest> linehaulTripDriverCreateRequest;
 
-    @Nullable
+    @NotNull(message = "Vehicle id id is required")
     private Long vehicleId;
 
-    @Nullable
+    @NotNull(message = "Route id id is required")
     private Long routeId;
 
 }

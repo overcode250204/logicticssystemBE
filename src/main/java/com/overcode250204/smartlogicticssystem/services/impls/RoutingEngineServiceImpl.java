@@ -143,7 +143,7 @@ public class RoutingEngineServiceImpl implements IRoutingEngineService {
     private void triggerPalletization(RouteConfig route, List<Order> eligibleOrders) {
         log.info("Triggering palletization for Route: {}", route.getRouteName());
 
-        // Create Shipment Batch (LinehaulTrip) - TODO FOR ADMIN UPDATE FLEXIBLE
+        // Create Shipment Batch (LinehaulTrip)
         LinehaulTrip trip = new LinehaulTrip();
         trip.setRouteConfig(route);
         trip.setVehicle(route.getDefaultVehicle());
@@ -186,7 +186,7 @@ public class RoutingEngineServiceImpl implements IRoutingEngineService {
                 sb.append(chars.charAt(ThreadLocalRandom.current().nextInt(chars.length())));
             }
             code = sb.toString();
-        } while (orderRepository.existsByOrderCode(code));
+        } while (palletRepository.existsPalletByPalletCode(code));
         return code;
     }
 

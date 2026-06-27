@@ -10,4 +10,6 @@ import java.util.List;
 @Repository
 public interface PalletRepository extends JpaRepository<Pallet, Long> {
    List<Pallet> findPalletByLinehaulTrip(LinehaulTrip linehaulTrip);
+
+    boolean existsPalletByPalletCode(String code);
 }

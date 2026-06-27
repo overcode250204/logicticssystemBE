@@ -1,5 +1,5 @@
 package com.overcode250204.smartlogicticssystem.enums;
 
 public enum LinehaulTripStatus {
-    PREPARING, EN_ROUTE, ARRIVED
+    PREPARING, EN_ROUTE, ARRIVED, CANCELLED
 }

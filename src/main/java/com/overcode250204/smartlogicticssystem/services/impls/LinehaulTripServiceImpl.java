@@ -19,9 +19,13 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 
 //NOTE===============CRUD for ADMIN manage Linehaul Trip============================
+// FIX must check assignment status of trip driver is ACCEPT can to EN_ROUTE. change status of driver to BUSY CREATE
+// MUST to remove STATUS because conflict with logic up
+// must check quantiy of Vehicle map with pallet item
 @Service
 @RequiredArgsConstructor
 public class LinehaulTripServiceImpl extends BaseServiceImpl implements ILinehaulTripService {
@@ -82,6 +86,15 @@ public class LinehaulTripServiceImpl extends BaseServiceImpl implements ILinehau
         checkAdminRole(roleId);
         LinehaulTrip linehaulTrip = findByIdOrThrow(linehaulTripRepository, id, LinehaulTripErrorCode.LINEHAUL_TRIP_NOT_FOUND);
 
+
+        if(LinehaulTripStatus.EN_ROUTE.equals(linehaulTrip.getStatus())){
+            throw new AppException(LinehaulTripErrorCode.LINEHAUL_TRIP_CAN_NOT_UPDATE);
+        }
+        List<Pallet> pallets = palletRepository.findPalletByLinehaulTrip(linehaulTrip);
+//        if(!pallets.isEmpty()){
+//            throw new AppException(LinehaulTripErrorCode.LINEHAUL_TRIP_CAN_NOT_UPDATE_ROUTE);
+//        }
+
         //MAP VEHICLE
         linehaulTrip.setVehicle(mapVehicle(request.getVehicleId()));
         //MAP ROUTE
@@ -106,6 +119,12 @@ public class LinehaulTripServiceImpl extends BaseServiceImpl implements ILinehau
                 if (!DriverType.LINEHAUL.equals(driver.getDriverType())) {
                     throw new AppException(DriverErrorCode.DRIVER_NOT_LINEHAUL);
                 }
+                if(linehaulTrip.getRouteConfig() != null){
+                    Long warehouseId = linehaulTrip.getRouteConfig().getFromWarehouse().getWarehouseId();
+                    if(!Objects.equals(warehouseId, driver.getCurrentWarehouse().getWarehouseId())){
+                        throw new AppException(DriverErrorCode.DRIVER_NOT_IN_WAREHOUSE);
+                    }
+                }
 
                 boolean previouslyAssigned = linehaulTrip.getTripDrivers().stream()
                         .anyMatch(td -> td.getDriver().getDriverId().equals(driver.getDriverId()));
@@ -116,6 +135,7 @@ public class LinehaulTripServiceImpl extends BaseServiceImpl implements ILinehau
                     driver.setStatus(DriverStatus.BUSY);
                     driverRepository.save(driver);
                 }
+
 
                 LinehaulTripDriver tripDriver = new LinehaulTripDriver();
                 tripDriver.setLinehaulTrip(linehaulTrip);
@@ -131,12 +151,11 @@ public class LinehaulTripServiceImpl extends BaseServiceImpl implements ILinehau
         }else{
             linehaulTrip.setTripDrivers(null);
         }
-
+    //note Business for Change STATUS
         LinehaulTripStatus newStatus = request.getStatus();
         if (newStatus != null) {
             linehaulTrip.setStatus(newStatus);
 
-            List<Pallet> pallets = palletRepository.findPalletByLinehaulTrip(linehaulTrip);
 
             if (LinehaulTripStatus.EN_ROUTE.equals(newStatus)) {
                 if (pallets.stream().anyMatch(p -> PalletStatus.CREATING.equals(p.getStatus())) || pallets.isEmpty()) {
@@ -168,6 +187,9 @@ public class LinehaulTripServiceImpl extends BaseServiceImpl implements ILinehau
     public void delete(Long id, int roleId, int userId) {
         checkAdminRole(roleId);
         LinehaulTrip linehaulTrip = findByIdOrThrow(linehaulTripRepository, id, LinehaulTripErrorCode.LINEHAUL_TRIP_NOT_FOUND);
+        if(LinehaulTripStatus.EN_ROUTE.equals(linehaulTrip.getStatus())){
+            throw new AppException(LinehaulTripErrorCode.LINEHAUL_TRIP_CAN_NOT_DELETE);
+        }
         
         for (LinehaulTripDriver tripDriver : linehaulTrip.getTripDrivers()) {
             Driver driver = tripDriver.getDriver();
@@ -177,7 +199,6 @@ public class LinehaulTripServiceImpl extends BaseServiceImpl implements ILinehau
         
         linehaulTripRepository.delete(linehaulTrip);
     }
-
 
     private RouteConfig mapRoute(Long routeId){
         if (routeId != null) {
@@ -213,6 +234,13 @@ public class LinehaulTripServiceImpl extends BaseServiceImpl implements ILinehau
                 if (!DriverStatus.AVAILABLE.equals(driver.getStatus())) {
                     throw new AppException(DriverErrorCode.DRIVER_NOT_AVAILABLE);
                 }
+                if(linehaulTrip.getRouteConfig() != null){
+                    Long warehouseId = linehaulTrip.getRouteConfig().getFromWarehouse().getWarehouseId();
+                    if(warehouseId != driver.getCurrentWarehouse().getWarehouseId()){
+                        throw new AppException(DriverErrorCode.DRIVER_NOT_IN_WAREHOUSE);
+                    }
+                }
+
                 driver.setStatus(DriverStatus.BUSY);
                 driverRepository.save(driver);
 
@@ -229,5 +257,6 @@ public class LinehaulTripServiceImpl extends BaseServiceImpl implements ILinehau
             return null;
         }
     }
+
 }
 
