@@ -2,14 +2,19 @@ package com.overcode250204.smartlogicticssystem.exception;
 
 import com.overcode250204.smartlogicticssystem.base.BaseResponse;
 import com.overcode250204.smartlogicticssystem.base.BaseErrorCode;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.NestedExceptionUtils;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import software.amazon.awssdk.services.s3.model.S3Exception;
-
+import org.postgresql.util.PSQLException;
+import org.postgresql.util.ServerErrorMessage;
 @RestControllerAdvice
+@Slf4j
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(AppException.class)
@@ -25,7 +30,61 @@ public class GlobalExceptionHandler {
                 .body(BaseResponse.error(HttpStatus.INTERNAL_SERVER_ERROR.value(),
                         "An unexpected error occurred: " + e.getMessage()));
     }
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<BaseResponse<Void>> handleDataIntegrityViolation(
+            DataIntegrityViolationException e
+    ) {
+        Throwable rootCause = NestedExceptionUtils.getMostSpecificCause(e);
 
+        String message = "Dữ liệu không hợp lệ hoặc vi phạm ràng buộc cơ sở dữ liệu.";
+
+        if (rootCause instanceof PSQLException postgresException) {
+            ServerErrorMessage serverError = postgresException.getServerErrorMessage();
+
+            if (serverError != null) {
+                String constraint = serverError.getConstraint();
+                String table = serverError.getTable();
+                String column = serverError.getColumn();
+
+                log.warn(
+                        "Database constraint violation. sqlState={}, table={}, column={}, constraint={}, detail={}",
+                        postgresException.getSQLState(),
+                        table,
+                        column,
+                        constraint,
+                        serverError.getDetail()
+                );
+
+                // PostgreSQL SQLSTATE:
+                // 23505 = unique violation
+                // 23503 = foreign key violation
+                // 23502 = not null violation
+                // 23514 = check constraint violation
+                switch (postgresException.getSQLState()) {
+                    case "23505" -> message = buildUniqueMessage(column, constraint);
+                    case "23503" -> message = buildForeignKeyMessage(column, constraint);
+                    case "23502" -> message = buildNotNullMessage(column);
+                    case "23514" -> message = buildCheckConstraintMessage(column, constraint);
+                    default -> message = buildGeneralDatabaseMessage(
+                            table,
+                            column,
+                            constraint
+                    );
+                }
+            }
+        } else {
+            log.warn(
+                    "Database integrity violation: {}",
+                    rootCause != null ? rootCause.getMessage() : e.getMessage()
+            );
+        }
+
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(BaseResponse.error(
+                        HttpStatus.CONFLICT.value(),
+                        message
+                ));
+    }
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<BaseResponse<Void>> handleValidationException(
             MethodArgumentNotValidException e) {
@@ -39,5 +98,76 @@ public class GlobalExceptionHandler {
         String message = e.getBindingResult().getFieldError().getDefaultMessage();
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(BaseResponse.error(HttpStatus.BAD_REQUEST.value(), message));
+    }private String buildUniqueMessage(String column, String constraint) {
+        if (column != null && !column.isBlank()) {
+            return "Giá trị của trường '" + column
+                    + "' đã tồn tại. Vui lòng sử dụng giá trị khác.";
+        }
+
+        if (constraint != null && !constraint.isBlank()) {
+            return "Dữ liệu bị trùng lặp. Ràng buộc bị vi phạm: '"
+                    + constraint + "'.";
+        }
+
+        return "Dữ liệu đã tồn tại hoặc bị trùng lặp.";
+    }
+
+    private String buildForeignKeyMessage(String column, String constraint) {
+        if (column != null && !column.isBlank()) {
+            return "Trường '" + column
+                    + "' đang tham chiếu đến dữ liệu không tồn tại hoặc không hợp lệ.";
+        }
+
+        if (constraint != null && !constraint.isBlank()) {
+            return "Dữ liệu liên quan không hợp lệ. Ràng buộc bị vi phạm: '"
+                    + constraint + "'.";
+        }
+
+        return "Dữ liệu liên quan không tồn tại hoặc không hợp lệ.";
+    }
+
+    private String buildNotNullMessage(String column) {
+        if (column != null && !column.isBlank()) {
+            return "Trường bắt buộc '" + column + "' không được để trống.";
+        }
+
+        return "Có trường bắt buộc không được để trống.";
+    }
+
+    private String buildCheckConstraintMessage(String column, String constraint) {
+        if (column != null && !column.isBlank()) {
+            return "Giá trị của trường '" + column
+                    + "' không thỏa điều kiện hợp lệ.";
+        }
+
+        if (constraint != null && !constraint.isBlank()) {
+            return "Dữ liệu không thỏa điều kiện của ràng buộc '"
+                    + constraint + "'.";
+        }
+
+        return "Dữ liệu không thỏa điều kiện hợp lệ.";
+    }
+
+    private String buildGeneralDatabaseMessage(
+            String table,
+            String column,
+            String constraint
+    ) {
+        if (column != null && !column.isBlank()) {
+            return "Dữ liệu tại trường '" + column
+                    + "' vi phạm ràng buộc cơ sở dữ liệu.";
+        }
+
+        if (constraint != null && !constraint.isBlank()) {
+            return "Dữ liệu vi phạm ràng buộc cơ sở dữ liệu: '"
+                    + constraint + "'.";
+        }
+
+        if (table != null && !table.isBlank()) {
+            return "Dữ liệu trong bảng '" + table
+                    + "' không hợp lệ hoặc vi phạm ràng buộc.";
+        }
+
+        return "Dữ liệu không hợp lệ hoặc vi phạm ràng buộc cơ sở dữ liệu.";
     }
 }

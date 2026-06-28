@@ -25,4 +25,7 @@ public class LocalTripDetail {
 
     @Column(name = "stop_order", nullable = false)
     private Integer stopOrder;
+
+    @Column(name = "proof_url", length = 500)
+    private String proofUrl;
 }

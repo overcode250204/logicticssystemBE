@@ -1,7 +1,9 @@
 package com.overcode250204.smartlogicticssystem.services.impls;
 
 import com.overcode250204.smartlogicticssystem.entities.*;
-import com.overcode250204.smartlogicticssystem.enums.*;
+import com.overcode250204.smartlogicticssystem.enums.LinehaulTripStatus;
+import com.overcode250204.smartlogicticssystem.enums.NotificationType;
+import com.overcode250204.smartlogicticssystem.enums.OrderStatus;
 import com.overcode250204.smartlogicticssystem.repositories.*;
 import com.overcode250204.smartlogicticssystem.services.IRoutingEngineService;
 import com.overcode250204.smartlogicticssystem.services.S3FileService;
@@ -15,7 +17,6 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
-import java.util.HashSet;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -26,12 +27,33 @@ public class RoutingEngineServiceImpl implements IRoutingEngineService {
 
     private final RouteConfigRepository routeConfigRepository;
     private final OrderRepository orderRepository;
-    private final OrderItemRepository orderItemRepository;
     private final LinehaulTripRepository linehaulTripRepository;
     private final PalletRepository palletRepository;
     private final NotificationRepository notificationRepository;
     private final S3FileService s3FileService;
 
+
+    //TODO CHECK ACTIVE DRIVER
+    //TODO CHECK ROLE
+    //TODO CHECK GPS FOR LINEHAUL TRIP
+    /*
+    TODO DRIVER TRIGGER UPDATE STATUS OF LINEHAUL TRIP -> TO NOTIFICATION
+     TODO IF TYPE LINEHAUL IF ARRIVED -> STAFF MUST SCAN BARCODE TO OPEN PALLET
+     TODO AND SCAN ORDER TO CHECK -> CHANGE STATUS OF ORDER  TO ARRIVED_AT_HUB
+     TODO IF LOSS ORDER -> STAFF MUST REPORT
+     TODO WHEN SCAN ALL OF ORDER -> STAFF TRIGGER FINISH TO NOTIFICATION
+     TODO AND SYSTEM WILL CREATE LOCAL TRIP FOR DRIVER AND RUN VRP
+     TODO LAST MILE DRIVER MUST FOLLOW STEP: CHANGE STATUS ORDER TO   IN_TRANSIT_LOCAL
+     TODO WHEN CHANGE TO ARRIVED_AT_DELIVERY_POINT MUST CHECK GPS
+     TODO DRIVER MUST CAPTURE BILL SEND TO SYSTEM. 2 TYPE PAYMENT COD -> MANAGE MAUNUAL. CREDIT -> MUST TO TRACKING IN SYSTEM
+     TODO IF FAIL -> ORDER MUST RESTORE CNC
+     TODO WHEN LOCAL TRIP FINISH MUST CHANGE LOCAL TRIP STATUS TO COMPLETED
+     ====================
+     TODO IF DRIVER HAVE PROBLEM. MUST ALLOW STAF CAN CHANGE DRIVER FOR THIS TRIP MANUAL
+     ===================
+     TODO IF HAVE FAILED ORDER
+     TODO WHEN LINEHAUL TRIP COME THIS ORDER WILL RETURN IN THIS VEHICLE.
+     */
     @Override
     @Transactional
     public void checkRoutingCondition(Long routeId) {
@@ -81,7 +103,7 @@ public class RoutingEngineServiceImpl implements IRoutingEngineService {
 
     private boolean checkHybridWaitTimeCondition(RouteConfig route, List<Order> newOrders) {
         if (route.getMaxWaitingDays() == null || newOrders.isEmpty()) return false;
-        Order oldestOrder = newOrders.get(0);
+        Order oldestOrder = newOrders.getFirst();
         LocalDateTime threshold = oldestOrder.getCreatedAt().plusDays(route.getMaxWaitingDays());
         return LocalDateTime.now().isAfter(threshold);
     }
@@ -89,14 +111,12 @@ public class RoutingEngineServiceImpl implements IRoutingEngineService {
     private boolean checkCapacityCondition(RouteConfig route, List<Order> newOrders) {
         if (route.getDefaultVehicle() == null || route.getMinCapacityPercentage() == null) return false;
 
-        List<OrderItem> items = orderItemRepository.findByOrderIn(newOrders);
-        
-        BigDecimal totalWeight = items.stream()
-                .map(OrderItem::getWeightKg)
+        BigDecimal totalWeight = newOrders.stream()
+                .map(Order::getTotalWeightKg)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        BigDecimal totalVolume = items.stream()
-                .map(OrderItem::getVolumeM3)
+        BigDecimal totalVolume = newOrders.stream()
+                .map(Order::getTotalVolumeM3)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         Vehicle vehicle = route.getDefaultVehicle();
@@ -123,17 +143,16 @@ public class RoutingEngineServiceImpl implements IRoutingEngineService {
     private void triggerPalletization(RouteConfig route, List<Order> eligibleOrders) {
         log.info("Triggering palletization for Route: {}", route.getRouteName());
 
-        // Create Shipment Batch (LinehaulTrip) - TODO FOR ADMIN CREATE FLEXIBLE
+        // Create Shipment Batch (LinehaulTrip)
         LinehaulTrip trip = new LinehaulTrip();
         trip.setRouteConfig(route);
         trip.setVehicle(route.getDefaultVehicle());
         trip.setStatus(LinehaulTripStatus.PREPARING);
         trip = linehaulTripRepository.save(trip);
 
-        // Update Orders and create Pallet
+        // Update Orders and create empty Pallet
         Pallet pallet = new Pallet();
         pallet.setLinehaulTrip(trip);
-        pallet.setOrders(new HashSet<>(eligibleOrders));
         pallet = palletRepository.save(pallet);
         // Generate Order Code
         String palletCode = generateUniqueOrderCode();
@@ -167,7 +186,7 @@ public class RoutingEngineServiceImpl implements IRoutingEngineService {
                 sb.append(chars.charAt(ThreadLocalRandom.current().nextInt(chars.length())));
             }
             code = sb.toString();
-        } while (orderRepository.existsByOrderCode(code));
+        } while (palletRepository.existsPalletByPalletCode(code));
         return code;
     }
 

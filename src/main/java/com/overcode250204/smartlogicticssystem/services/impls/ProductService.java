@@ -3,6 +3,7 @@ package com.overcode250204.smartlogicticssystem.services.impls;
 import com.overcode250204.smartlogicticssystem.base.BaseServiceImpl;
 import com.overcode250204.smartlogicticssystem.dtos.request.ProductCreateRequest;
 import com.overcode250204.smartlogicticssystem.dtos.request.ProductUpdateRequest;
+import com.overcode250204.smartlogicticssystem.dtos.response.ProductPageResponseDTO;
 import com.overcode250204.smartlogicticssystem.dtos.response.ProductResponseDTO;
 import com.overcode250204.smartlogicticssystem.entities.Product;
 import com.overcode250204.smartlogicticssystem.entities.ProductCategory;
@@ -23,6 +24,12 @@ import com.overcode250204.smartlogicticssystem.services.IProductService;
 import com.overcode250204.smartlogicticssystem.services.S3FileService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import jakarta.persistence.criteria.Predicate;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -31,6 +38,7 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -62,6 +70,62 @@ public class ProductService extends BaseServiceImpl implements IProductService {
         return productRepository.findAll().stream()
                 .map(productMapper::toResponse)
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    public ProductPageResponseDTO getProductsPage(
+            int page,
+            int size,
+            String keyword,
+            Long categoryId,
+            Long supplierId,
+            String sortBy,
+            String sortDirection
+    ) {
+        int safePage = Math.max(page, 0);
+        int safeSize = Math.min(Math.max(size, 1), 100);
+        Sort.Direction direction = "ASC".equalsIgnoreCase(sortDirection)
+                ? Sort.Direction.ASC
+                : Sort.Direction.DESC;
+        Pageable pageable = PageRequest.of(safePage, safeSize, Sort.by(direction, sortBy));
+
+        Specification<Product> spec = (root, query, criteriaBuilder) -> {
+            List<Predicate> predicates = new ArrayList<>();
+
+            if (StringUtils.hasText(keyword)) {
+                String searchPattern = "%" + keyword.trim().toLowerCase() + "%";
+                predicates.add(criteriaBuilder.or(
+                        criteriaBuilder.like(criteriaBuilder.lower(root.get("productName")), searchPattern),
+                        criteriaBuilder.like(criteriaBuilder.lower(root.get("productCode")), searchPattern),
+                        criteriaBuilder.like(criteriaBuilder.lower(root.get("sku")), searchPattern)
+                ));
+            }
+
+            if (categoryId != null) {
+                predicates.add(criteriaBuilder.equal(root.get("category").get("categoryId"), categoryId));
+            }
+
+            if (supplierId != null) {
+                predicates.add(criteriaBuilder.equal(root.get("supplier").get("supplierId"), supplierId));
+            }
+
+            return criteriaBuilder.and(predicates.toArray(new Predicate[0]));
+        };
+
+        Page<Product> products = productRepository.findAll(spec, pageable);
+        List<ProductResponseDTO> content = products.getContent().stream()
+                .map(productMapper::toResponse)
+                .collect(Collectors.toList());
+
+        return ProductPageResponseDTO.builder()
+                .content(content)
+                .page(products.getNumber())
+                .size(products.getSize())
+                .totalElements(products.getTotalElements())
+                .totalPages(products.getTotalPages())
+                .first(products.isFirst())
+                .last(products.isLast())
+                .build();
     }
 
     @Override

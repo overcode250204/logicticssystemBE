@@ -63,4 +63,14 @@ public class Order {
 
     @Column(name = "delivery_point", columnDefinition = "geometry(Point, 4326)")
     private Point deliveryPoint;
+
+    @Column(name = "total_weight_kg", nullable = false)
+    private BigDecimal totalWeightKg;
+
+    @Column(name = "total_volume_m3", nullable = false)
+    private BigDecimal totalVolumeM3;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "zone_id")
+    private Zone zone;
 }

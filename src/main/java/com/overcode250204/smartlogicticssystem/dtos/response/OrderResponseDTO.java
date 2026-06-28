@@ -26,6 +26,8 @@ public class OrderResponseDTO {
     private BigDecimal totalAmount;
     private PaymentType paymentType;
     private OrderStatus status;
+    private BigDecimal totalWeightKg;
+    private BigDecimal totalVolumeM3;
     private LocalDateTime createdAt;
     private List<OrderItemResponseDTO> items;
 }

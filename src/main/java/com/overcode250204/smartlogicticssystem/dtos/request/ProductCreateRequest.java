@@ -39,10 +39,6 @@ public class ProductCreateRequest {
     @Positive(message = "Height must be positive")
     private BigDecimal height;
 
-
-    /**
-     * Optional: ID of the base unit (quantity unit, e.g. PCS).
-     */
     private Long baseUnitId;
 
     @PositiveOrZero(message = "Minimum stock level must not be negative")
