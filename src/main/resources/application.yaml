@@ -6,8 +6,8 @@ spring:
       enabled: true
   datasource:
     url: jdbc:postgresql://localhost:5432/smart_logistics
-    username: admin
-    password: HelloYoutube
+    username: postgres
+    password: root
     driver-class-name: org.postgresql.Driver
 
   jpa:
@@ -18,7 +18,7 @@ spring:
 
 aws:
   s3:
-    bucket-name: ${AWS_S3_BUCKET_NAME}
+    bucket-name: ${AWS_S3_BUCKET}
     region: ${AWS_REGION}
     access-key: ${AWS_ACCESS_KEY}
     secret-key: ${AWS_SECRET_KEY}
