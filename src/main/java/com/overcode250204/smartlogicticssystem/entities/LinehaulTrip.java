@@ -31,6 +31,11 @@ public class LinehaulTrip {
     )
     private List<LinehaulTripDriver> tripDrivers = new ArrayList<>();
 
+    @OneToMany(
+            mappedBy = "linehaulTrip"
+    )
+    private List<Pallet> pallets = new ArrayList<>();
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "vehicle_id")
     private Vehicle vehicle;
@@ -44,4 +49,7 @@ public class LinehaulTrip {
 
     @Column(name = "arrival_time")
     private LocalDateTime arrivalTime;
+
+    @Column(name = "is_created_system")
+    private Boolean isCreatedSystem;
 }

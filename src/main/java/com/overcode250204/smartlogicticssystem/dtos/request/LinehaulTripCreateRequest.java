@@ -16,7 +16,7 @@ public class LinehaulTripCreateRequest {
     @Nullable
     private List<LinehaulTripDriverCreateRequest> linehaulTripDriverCreateRequest;
 
-    @NotNull(message = "Vehicle id id is required")
+    @Nullable
     private Long vehicleId;
 
     @NotNull(message = "Route id id is required")

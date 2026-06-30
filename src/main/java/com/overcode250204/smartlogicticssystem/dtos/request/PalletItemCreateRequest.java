@@ -4,8 +4,7 @@ import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
 @Data
-public class PalletCreateRequest {
-
-    @NotNull(message = "Route config id is required")
-    private Long routeConfigId;
+public class PalletItemCreateRequest {
+    @NotNull(message = "Order code id is required")
+    private String orderCode;
 }

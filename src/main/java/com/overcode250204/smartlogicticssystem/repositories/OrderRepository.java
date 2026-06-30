@@ -12,4 +12,5 @@ import java.util.List;
 public interface OrderRepository extends JpaRepository<Order, Long> {
     List<Order> findByRouteConfigAndStatusOrderByCreatedAtAsc(RouteConfig routeConfig, OrderStatus status);
     boolean existsByOrderCode(String orderCode);
+    java.util.Optional<Order> findByOrderCode(String orderCode);
 }

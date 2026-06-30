@@ -17,5 +17,13 @@ public interface ILinehaulTripService {
     LinehaulTripResponseDTO update(Long id, LinehaulTripUpdateRequest request, int roleId, int userId);
 
     void delete(Long id, int roleId, int userId);
+
+    LinehaulTripResponseDTO addPallet(Long id, com.overcode250204.smartlogicticssystem.dtos.request.LinehaulTripAddPalletRequest request, int roleId, int userId);
+
+    LinehaulTripResponseDTO removePallet(Long id, Long palletId, int roleId, int userId);
+
+    LinehaulTripResponseDTO dispatchTrip(Long id, com.overcode250204.smartlogicticssystem.dtos.request.LinehaulTripGpsRequest request, int roleId, int userId);
+
+    LinehaulTripResponseDTO finishTrip(Long id, com.overcode250204.smartlogicticssystem.dtos.request.LinehaulTripGpsRequest request, int roleId, int userId);
 }
 

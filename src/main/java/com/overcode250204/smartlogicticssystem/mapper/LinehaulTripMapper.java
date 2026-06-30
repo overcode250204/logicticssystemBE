@@ -21,12 +21,25 @@ public class LinehaulTripMapper {
 
         return LinehaulTripResponseDTO.builder()
                 .linehaulId(entity.getLinehaulId())
-                .routeConfigResponseDTO(routeConfigMapper.toResponse(entity.getRouteConfig()))
-                .linehaulTripDriverResponseDTO( entity.getTripDrivers() != null ?
+                .routeConfig(routeConfigMapper.toResponse(entity.getRouteConfig()))
+                .linehaulTripDriver( entity.getTripDrivers() != null ?
                         entity.getTripDrivers()
                                 .stream()
                                 .map(driverMapper::toResponse).toList() : null)
-                .vehicleResponseDTO(vehicleMapper.toResponse(entity.getVehicle()))
+                .pallets(entity.getPallets() != null ?
+                        entity.getPallets().stream()
+                                .map(p -> com.overcode250204.smartlogicticssystem.dtos.response.PalletResponseDTO.builder()
+                                        .palletId(p.getPalletId())
+                                        .palletCode(p.getPalletCode())
+                                        .barcodeUrl(p.getBarcodeUrl())
+                                        .totalWeightKg(p.getTotalWeightKg())
+                                        .totalVolumeM3(p.getTotalVolumeM3())
+                                        .status(p.getStatus())
+                                        .createdAt(p.getCreatedAt())
+                                        .isCreatedSystem(p.getIsCreatedSystem())
+                                        .build())
+                                .toList() : null)
+                .vehicle(vehicleMapper.toResponse(entity.getVehicle()))
                 .status(entity.getStatus())
                 .departureTime(entity.getDepartureTime())
                 .arrivalTime(entity.getArrivalTime())

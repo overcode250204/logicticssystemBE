@@ -6,10 +6,16 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface PalletRepository extends JpaRepository<Pallet, Long> {
    List<Pallet> findPalletByLinehaulTrip(LinehaulTrip linehaulTrip);
 
     boolean existsPalletByPalletCode(String code);
+
+    Optional<Pallet> findByPalletCode(String palletCode);
+
+    @org.springframework.data.jpa.repository.Query("SELECT p FROM Pallet p LEFT JOIN FETCH p.palletItems pi LEFT JOIN FETCH pi.order WHERE p.palletId = :palletId")
+    Optional<Pallet> findByIdWithItemsAndOrders(@org.springframework.data.repository.query.Param("palletId") Long palletId);
 }

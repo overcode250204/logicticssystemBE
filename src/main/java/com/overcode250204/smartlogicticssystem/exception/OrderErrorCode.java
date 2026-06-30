@@ -22,5 +22,6 @@ public enum OrderErrorCode implements BaseErrorCode {
         public static final String ORDER_NOT_FOUND = "Order not found";
         public static final String DELIVERY_PROVINCE_UNSUPPORTED = "Delivery to this province is currently not supported";
         public static final String PRODUCT_NOT_FOUND = "Product not found";
+
     }
 }

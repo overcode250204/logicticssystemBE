@@ -1,10 +1,7 @@
 package com.overcode250204.smartlogicticssystem.services.impls;
 
 import com.overcode250204.smartlogicticssystem.base.BaseServiceImpl;
-import com.overcode250204.smartlogicticssystem.dtos.request.LinehaulTripCreateRequest;
-import com.overcode250204.smartlogicticssystem.dtos.request.LinehaulTripDriverCreateRequest;
-import com.overcode250204.smartlogicticssystem.dtos.request.LinehaulTripDriverUpdateRequest;
-import com.overcode250204.smartlogicticssystem.dtos.request.LinehaulTripUpdateRequest;
+import com.overcode250204.smartlogicticssystem.dtos.request.*;
 import com.overcode250204.smartlogicticssystem.dtos.response.LinehaulTripResponseDTO;
 import com.overcode250204.smartlogicticssystem.entities.*;
 import com.overcode250204.smartlogicticssystem.enums.*;
@@ -22,10 +19,6 @@ import java.util.List;
 import java.util.Objects;
 
 
-//NOTE===============CRUD for ADMIN manage Linehaul Trip============================
-// FIX must check assignment status of trip driver is ACCEPT can to EN_ROUTE. change status of driver to BUSY CREATE
-// MUST to remove STATUS because conflict with logic up
-// must check quantiy of Vehicle map with pallet item
 @Service
 @RequiredArgsConstructor
 public class LinehaulTripServiceImpl extends BaseServiceImpl implements ILinehaulTripService {
@@ -35,6 +28,7 @@ public class LinehaulTripServiceImpl extends BaseServiceImpl implements ILinehau
     private final RouteConfigRepository routeConfigRepository;
     private final LinehaulTripMapper linehaulTripMapper;
     private final PalletRepository palletRepository;
+    private final OrderRepository orderRepository;
 
     private void checkAdminRole(int roleId) {
         if (roleId != 1) {
@@ -42,6 +36,7 @@ public class LinehaulTripServiceImpl extends BaseServiceImpl implements ILinehau
         }
     }
 
+    //NOTE===============CRUD for ADMIN manage Linehaul Trip============================
     @Override
     @Transactional
     public LinehaulTripResponseDTO create(LinehaulTripCreateRequest request, int roleId, int userId) {
@@ -87,18 +82,14 @@ public class LinehaulTripServiceImpl extends BaseServiceImpl implements ILinehau
         LinehaulTrip linehaulTrip = findByIdOrThrow(linehaulTripRepository, id, LinehaulTripErrorCode.LINEHAUL_TRIP_NOT_FOUND);
 
 
-        if(LinehaulTripStatus.EN_ROUTE.equals(linehaulTrip.getStatus())){
+        if(!LinehaulTripStatus.PREPARING.equals(linehaulTrip.getStatus())){
             throw new AppException(LinehaulTripErrorCode.LINEHAUL_TRIP_CAN_NOT_UPDATE);
         }
-        List<Pallet> pallets = palletRepository.findPalletByLinehaulTrip(linehaulTrip);
-//        if(!pallets.isEmpty()){
-//            throw new AppException(LinehaulTripErrorCode.LINEHAUL_TRIP_CAN_NOT_UPDATE_ROUTE);
-//        }
 
         //MAP VEHICLE
         linehaulTrip.setVehicle(mapVehicle(request.getVehicleId()));
-        //MAP ROUTE
-        linehaulTrip.setRouteConfig(mapRoute(request.getRouteId()));
+        // todo check constraint of vehicle for trip if have pallet
+
         if (request.getLinehaulTripDriverUpdateRequests() != null) {
             List<Long> newDriverIds = request.getLinehaulTripDriverUpdateRequests().stream()
                     .map(LinehaulTripDriverUpdateRequest::getDriverId).toList();
@@ -151,32 +142,6 @@ public class LinehaulTripServiceImpl extends BaseServiceImpl implements ILinehau
         }else{
             linehaulTrip.setTripDrivers(null);
         }
-    //note Business for Change STATUS
-        LinehaulTripStatus newStatus = request.getStatus();
-        if (newStatus != null) {
-            linehaulTrip.setStatus(newStatus);
-
-
-            if (LinehaulTripStatus.EN_ROUTE.equals(newStatus)) {
-                if (pallets.stream().anyMatch(p -> PalletStatus.CREATING.equals(p.getStatus())) || pallets.isEmpty()) {
-                    throw new AppException(LinehaulTripErrorCode.LINEHAUL_TRIP_CAN_NOT_EN_ROUTE);
-                }
-                linehaulTrip.setDepartureTime(LocalDateTime.now());
-                for (Pallet pallet : pallets) {
-                    pallet.setStatus(PalletStatus.IN_TRANSIT);
-                    palletRepository.save(pallet);
-                }
-            }
-
-            if (LinehaulTripStatus.ARRIVED.equals(newStatus)) {
-                linehaulTrip.setArrivalTime(LocalDateTime.now());
-                for (LinehaulTripDriver tripDriver : linehaulTrip.getTripDrivers()) {
-                    Driver driver = tripDriver.getDriver();
-                    driver.setStatus(DriverStatus.AVAILABLE);
-                    driverRepository.save(driver);
-                }
-            }
-        }
 
         linehaulTripRepository.save(linehaulTrip);
         return linehaulTripMapper.toResponse(linehaulTrip);
@@ -185,18 +150,28 @@ public class LinehaulTripServiceImpl extends BaseServiceImpl implements ILinehau
     @Override
     @Transactional
     public void delete(Long id, int roleId, int userId) {
+
         checkAdminRole(roleId);
         LinehaulTrip linehaulTrip = findByIdOrThrow(linehaulTripRepository, id, LinehaulTripErrorCode.LINEHAUL_TRIP_NOT_FOUND);
-        if(LinehaulTripStatus.EN_ROUTE.equals(linehaulTrip.getStatus())){
+        if(!LinehaulTripStatus.PREPARING.equals(linehaulTrip.getStatus())){
             throw new AppException(LinehaulTripErrorCode.LINEHAUL_TRIP_CAN_NOT_DELETE);
         }
-        
+
+        List<Pallet> pallets = palletRepository.findPalletByLinehaulTrip(linehaulTrip);
+        if (pallets != null && !pallets.isEmpty()) {
+            for (Pallet pallet : pallets) {
+                pallet.setLinehaulTrip(null);
+                //todo need to change status order to IN_Pallet
+                palletRepository.save(pallet);
+            }
+        }
+
         for (LinehaulTripDriver tripDriver : linehaulTrip.getTripDrivers()) {
             Driver driver = tripDriver.getDriver();
             driver.setStatus(DriverStatus.AVAILABLE);
             driverRepository.save(driver);
         }
-        
+
         linehaulTripRepository.delete(linehaulTrip);
     }
 
@@ -258,5 +233,215 @@ public class LinehaulTripServiceImpl extends BaseServiceImpl implements ILinehau
         }
     }
 
+    //NOTE===============Handle add Pallet for TRIP ============================
+    @Override
+    @Transactional
+    public LinehaulTripResponseDTO addPallet(Long id, LinehaulTripAddPalletRequest request, int roleId, int userId) {
+        checkAdminRole(roleId);
+        LinehaulTrip linehaulTrip = findByIdOrThrow(linehaulTripRepository, id, LinehaulTripErrorCode.LINEHAUL_TRIP_NOT_FOUND);
+
+        if (!LinehaulTripStatus.PREPARING.equals(linehaulTrip.getStatus())) {
+            throw new AppException(LinehaulTripErrorCode.LINEHAUL_TRIP_CAN_NOT_UPDATE);
+        }
+
+        Pallet pallet = findByIdOrThrow(palletRepository, request.getPalletId(), PalletErrorCode.PALLET_NOT_FOUND);
+
+
+        if (pallet.getLinehaulTrip() != null) {
+            throw new AppException(PalletErrorCode.PALLET_AlREADY_ASSIGNED);
+        }
+
+        if(!PalletStatus.SEALED.equals(pallet.getStatus())){
+            throw new AppException(PalletErrorCode.PALLET_AlREADY_ASSIGNED);
+        }
+
+        if (pallet.getRouteConfig() == null || linehaulTrip.getRouteConfig() == null ||
+                !pallet.getRouteConfig().getRouteId().equals(linehaulTrip.getRouteConfig().getRouteId())) {
+            throw new AppException(PalletErrorCode.ROUTE_MISMATCH);
+        }
+
+        Vehicle vehicle = linehaulTrip.getVehicle();
+        if (vehicle == null) {
+            vehicle = linehaulTrip.getRouteConfig().getDefaultVehicle();
+        }
+
+        if (vehicle != null) {
+            java.math.BigDecimal currentWeight = linehaulTrip.getPallets().stream()
+                    .map(Pallet::getTotalWeightKg)
+                    .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
+            java.math.BigDecimal newWeight = currentWeight.add(pallet.getTotalWeightKg());
+            if (vehicle.getMaxWeightKg() != null && newWeight.compareTo(vehicle.getMaxWeightKg()) > 0) {
+                throw new AppException(LinehaulTripErrorCode.LINEHAUL_TRIP_CAPACITY_EXCEEDED);
+            }
+
+            java.math.BigDecimal currentVolume = linehaulTrip.getPallets().stream()
+                    .map(Pallet::getTotalVolumeM3)
+                    .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
+            java.math.BigDecimal newVolume = currentVolume.add(pallet.getTotalVolumeM3());
+            if (vehicle.getMaxVolumeM3() != null && newVolume.compareTo(vehicle.getMaxVolumeM3()) > 0) {
+                throw new AppException(LinehaulTripErrorCode.LINEHAUL_TRIP_CAPACITY_EXCEEDED);
+            }
+        }
+
+        pallet.setLinehaulTrip(linehaulTrip);
+        palletRepository.save(pallet);
+
+        if (!linehaulTrip.getPallets().contains(pallet)) {
+            linehaulTrip.getPallets().add(pallet);
+        }
+
+        return linehaulTripMapper.toResponse(linehaulTrip);
+    }
+
+    @Override
+    @Transactional
+    public LinehaulTripResponseDTO removePallet(Long id, Long palletId, int roleId, int userId) {
+        checkAdminRole(roleId);
+        LinehaulTrip linehaulTrip = findByIdOrThrow(linehaulTripRepository, id, LinehaulTripErrorCode.LINEHAUL_TRIP_NOT_FOUND);
+
+        if (!LinehaulTripStatus.PREPARING.equals(linehaulTrip.getStatus())) {
+            throw new AppException(LinehaulTripErrorCode.LINEHAUL_TRIP_CAN_NOT_UPDATE);
+        }
+
+        Pallet pallet = findByIdOrThrow(palletRepository, palletId, PalletErrorCode.PALLET_NOT_FOUND);
+
+        if (pallet.getLinehaulTrip() == null || !pallet.getLinehaulTrip().getLinehaulId().equals(id)) {
+            throw new AppException(PalletErrorCode.PALLET_CANNOT_UPDATE);
+        }
+
+        pallet.setLinehaulTrip(null);
+        palletRepository.save(pallet);
+
+        linehaulTrip.getPallets().remove(pallet);
+
+        return linehaulTripMapper.toResponse(linehaulTrip);
+    }
+
+    private double calculateDistanceInMeters(double lat1, double lon1, double lat2, double lon2) {
+        double earthRadius = 6371000; // meters
+        double dLat = Math.toRadians(lat2 - lat1);
+        double dLon = Math.toRadians(lon2 - lon1);
+        double a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                   Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2)) *
+                   Math.sin(dLon / 2) * Math.sin(dLon / 2);
+        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return earthRadius * c;
+    }
+
+    //NOTE===============DELIVERY for DRIVER ============================
+    @Override
+    @Transactional
+    public LinehaulTripResponseDTO dispatchTrip(Long id, LinehaulTripGpsRequest request, int roleId, int userId) {
+        LinehaulTrip linehaulTrip = findByIdOrThrow(linehaulTripRepository, id, LinehaulTripErrorCode.LINEHAUL_TRIP_NOT_FOUND);
+
+        //Check driver
+        //TODO must have trip drivers even actor is admin
+        boolean isAssignedDriver = linehaulTrip.getTripDrivers().stream()
+                .anyMatch(td -> td.getDriver() != null && td.getDriver().getUser() != null 
+                        && td.getDriver().getUser().getUserId() != null 
+                        && td.getDriver().getUser().getUserId().intValue() == userId);
+        if (roleId != 1 && !isAssignedDriver) {
+            throw new AppException(RoleErrorCode.ROLE_HAS_NO_PERMISSION);
+        }
+
+        //Check previous status
+        if (!LinehaulTripStatus.PREPARING.equals(linehaulTrip.getStatus())) {
+            throw new AppException(LinehaulTripErrorCode.LINEHAUL_TRIP_CAN_NOT_EN_ROUTE);
+        }
+
+        if (linehaulTrip.getPallets() == null || linehaulTrip.getPallets().isEmpty()) {
+            throw new AppException(LinehaulTripErrorCode.LINEHAUL_TRIP_CAN_NOT_EN_ROUTE);
+        }
+        for (Pallet pallet : linehaulTrip.getPallets()) {
+            if (PalletStatus.CREATING.equals(pallet.getStatus())) {
+                throw new AppException(LinehaulTripErrorCode.LINEHAUL_TRIP_CAN_NOT_EN_ROUTE);
+            }
+        }
+        //check route
+        if (linehaulTrip.getRouteConfig() == null || linehaulTrip.getRouteConfig().getFromWarehouse() == null) {
+            throw new AppException(RouteConfigErrorCode.ROUTE_CONFIG_NOT_FOUND);
+        }
+        // check warehouse and GPS of driver
+        Warehouse fromWarehouse = linehaulTrip.getRouteConfig().getFromWarehouse();
+        if (fromWarehouse.getLocation() == null) {
+            throw new AppException(WarehouseErrorCode.WAREHOUSE_NOT_FOUND);
+        }
+        double lat1 = fromWarehouse.getLocation().getY();
+        double lon1 = fromWarehouse.getLocation().getX();
+        double distance = calculateDistanceInMeters(lat1, lon1, request.getLatitude(), request.getLongitude());
+        if (distance > 500.0) {
+            throw new AppException(LinehaulTripErrorCode.GPS_NOT_NEAR_FROM_WAREHOUSE);
+        }
+        //Change status to EN_ROUTE
+
+        linehaulTrip.setStatus(LinehaulTripStatus.EN_ROUTE);
+        linehaulTrip.setDepartureTime(LocalDateTime.now());
+
+        //Change status of pallet
+        for (Pallet pallet : linehaulTrip.getPallets()) {
+            pallet.setStatus(PalletStatus.IN_TRANSIT);
+            List<PalletItem> items = pallet.getPalletItems();
+            //Change status of order
+            for(PalletItem item :items){
+                Order order = item.getOrder();
+                if(order != null){
+                    order.setStatus(OrderStatus.IN_TRANSIT_LINEHAUL);
+                    orderRepository.save(order);
+                }
+            }
+            palletRepository.save(pallet);
+        }
+
+        LinehaulTrip savedTrip = linehaulTripRepository.save(linehaulTrip);
+        return linehaulTripMapper.toResponse(savedTrip);
+    }
+
+    @Override
+    @Transactional
+    public LinehaulTripResponseDTO finishTrip(Long id, LinehaulTripGpsRequest request, int roleId, int userId) {
+        LinehaulTrip linehaulTrip = findByIdOrThrow(linehaulTripRepository, id, LinehaulTripErrorCode.LINEHAUL_TRIP_NOT_FOUND);
+        //Check driver
+        boolean isAssignedDriver = linehaulTrip.getTripDrivers().stream()
+                .anyMatch(td -> td.getDriver() != null && td.getDriver().getUser() != null 
+                        && td.getDriver().getUser().getUserId() != null 
+                        && td.getDriver().getUser().getUserId().intValue() == userId);
+        if (roleId != 1 && !isAssignedDriver) {
+            throw new AppException(RoleErrorCode.ROLE_HAS_NO_PERMISSION);
+        }
+        //Check previous status
+        if (!LinehaulTripStatus.EN_ROUTE.equals(linehaulTrip.getStatus())) {
+            throw new AppException(LinehaulTripErrorCode.LINEHAUL_TRIP_CAN_NOT_UPDATE);
+        }
+        //Check route
+        if (linehaulTrip.getRouteConfig() == null || linehaulTrip.getRouteConfig().getToWarehouse() == null) {
+            throw new AppException(RouteConfigErrorCode.ROUTE_CONFIG_NOT_FOUND);
+        }
+        //Check warehouse and GPS of driver
+        Warehouse toWarehouse = linehaulTrip.getRouteConfig().getToWarehouse();
+        if (toWarehouse.getLocation() == null) {
+            throw new AppException(WarehouseErrorCode.WAREHOUSE_NOT_FOUND);
+        }
+        double lat1 = toWarehouse.getLocation().getY();
+        double lon1 = toWarehouse.getLocation().getX();
+        double distance = calculateDistanceInMeters(lat1, lon1, request.getLatitude(), request.getLongitude());
+        if (distance > 500.0) {
+            throw new AppException(LinehaulTripErrorCode.GPS_NOT_NEAR_TO_WAREHOUSE);
+        }
+        //Change status
+        linehaulTrip.setStatus(LinehaulTripStatus.ARRIVED);
+        linehaulTrip.setArrivalTime(LocalDateTime.now());
+
+        // ============================
+        //Change status driver
+        for (LinehaulTripDriver tripDriver : linehaulTrip.getTripDrivers()) {
+            Driver driver = tripDriver.getDriver();
+            driver.setStatus(DriverStatus.AVAILABLE);
+            driver.setCurrentWarehouse(toWarehouse);
+            driverRepository.save(driver);
+        }
+
+        LinehaulTrip savedTrip = linehaulTripRepository.save(linehaulTrip);
+        return linehaulTripMapper.toResponse(savedTrip);
+    }
 }
 

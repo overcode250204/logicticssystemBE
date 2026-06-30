@@ -33,27 +33,7 @@ public class RoutingEngineServiceImpl implements IRoutingEngineService {
     private final S3FileService s3FileService;
 
 
-    //TODO CHECK ACTIVE DRIVER
-    //TODO CHECK ROLE
-    //TODO CHECK GPS FOR LINEHAUL TRIP
-    /*
-    TODO DRIVER TRIGGER UPDATE STATUS OF LINEHAUL TRIP -> TO NOTIFICATION
-     TODO IF TYPE LINEHAUL IF ARRIVED -> STAFF MUST SCAN BARCODE TO OPEN PALLET
-     TODO AND SCAN ORDER TO CHECK -> CHANGE STATUS OF ORDER  TO ARRIVED_AT_HUB
-     TODO IF LOSS ORDER -> STAFF MUST REPORT
-     TODO WHEN SCAN ALL OF ORDER -> STAFF TRIGGER FINISH TO NOTIFICATION
-     TODO AND SYSTEM WILL CREATE LOCAL TRIP FOR DRIVER AND RUN VRP
-     TODO LAST MILE DRIVER MUST FOLLOW STEP: CHANGE STATUS ORDER TO   IN_TRANSIT_LOCAL
-     TODO WHEN CHANGE TO ARRIVED_AT_DELIVERY_POINT MUST CHECK GPS
-     TODO DRIVER MUST CAPTURE BILL SEND TO SYSTEM. 2 TYPE PAYMENT COD -> MANAGE MAUNUAL. CREDIT -> MUST TO TRACKING IN SYSTEM
-     TODO IF FAIL -> ORDER MUST RESTORE CNC
-     TODO WHEN LOCAL TRIP FINISH MUST CHANGE LOCAL TRIP STATUS TO COMPLETED
-     ====================
-     TODO IF DRIVER HAVE PROBLEM. MUST ALLOW STAF CAN CHANGE DRIVER FOR THIS TRIP MANUAL
-     ===================
-     TODO IF HAVE FAILED ORDER
-     TODO WHEN LINEHAUL TRIP COME THIS ORDER WILL RETURN IN THIS VEHICLE.
-     */
+
     @Override
     @Transactional
     public void checkRoutingCondition(Long routeId) {
@@ -140,14 +120,16 @@ public class RoutingEngineServiceImpl implements IRoutingEngineService {
         return false;
     }
 
-    private void triggerPalletization(RouteConfig route, List<Order> eligibleOrders) {
+    @Transactional
+    protected void triggerPalletization(RouteConfig route, List<Order> eligibleOrders) {
         log.info("Triggering palletization for Route: {}", route.getRouteName());
 
         // Create Shipment Batch (LinehaulTrip)
         LinehaulTrip trip = new LinehaulTrip();
         trip.setRouteConfig(route);
-        trip.setVehicle(route.getDefaultVehicle());
+//        trip.setVehicle(route.getDefaultVehicle());
         trip.setStatus(LinehaulTripStatus.PREPARING);
+        trip.setIsCreatedSystem(true);
         trip = linehaulTripRepository.save(trip);
 
         // Update Orders and create empty Pallet
@@ -163,12 +145,30 @@ public class RoutingEngineServiceImpl implements IRoutingEngineService {
         BarcodeGeneratorUtil.GeneratedCode128Barcode generatedBarcode = BarcodeGeneratorUtil.generateCode128Barcode(barcodeData);
         String barcodeImageUrl = uploadBarcodeImage(generatedBarcode);
         pallet.setBarcodeUrl(barcodeImageUrl);
+        pallet.setRouteConfig(route);
+        pallet.setIsCreatedSystem(true);
+
+        BigDecimal totalWeight = BigDecimal.ZERO;
+        BigDecimal totalVolume = BigDecimal.ZERO;
 
         for (Order order : eligibleOrders) {
             order.setStatus(OrderStatus.READY_TO_PICK);
+            PalletItem item = new PalletItem();
+            item.setOrder(order);
+            item.setPallet(pallet);
+            pallet.getPalletItems().add(item);
             orderRepository.save(order);
-        }
 
+            if (order.getTotalWeightKg() != null) {
+                totalWeight = totalWeight.add(order.getTotalWeightKg());
+            }
+            if (order.getTotalVolumeM3() != null) {
+                totalVolume = totalVolume.add(order.getTotalVolumeM3());
+            }
+        }
+        pallet.setTotalWeightKg(totalWeight);
+        pallet.setTotalVolumeM3(totalVolume);
+        palletRepository.save(pallet);
         // Send Notification to Hub Manager
         Notification notification = new Notification();
         notification.setTitle("Palletization Task: " + route.getRouteName());
