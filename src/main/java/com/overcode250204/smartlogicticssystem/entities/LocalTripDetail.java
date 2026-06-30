@@ -1,5 +1,6 @@
 package com.overcode250204.smartlogicticssystem.entities;
 
+import com.overcode250204.smartlogicticssystem.enums.LocalTripDetailStatus;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -28,4 +29,11 @@ public class LocalTripDetail {
 
     @Column(name = "proof_url", length = 500)
     private String proofUrl;
+    
+    @Column(name = "barcode_scanned")
+    private Boolean barcodeScanned = false;
+
+     @Enumerated(EnumType.STRING)
+    @Column(name = "status", length = 20)
+    private LocalTripDetailStatus status = LocalTripDetailStatus.PENDING;
 }

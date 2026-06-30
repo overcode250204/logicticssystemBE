@@ -13,4 +13,5 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     List<Order> findByRouteConfigAndStatusOrderByCreatedAtAsc(RouteConfig routeConfig, OrderStatus status);
     boolean existsByOrderCode(String orderCode);
     java.util.Optional<Order> findByOrderCode(String orderCode);
+    List<Order> findByZone_ZoneIdAndStatusIn(Long zoneId, List<OrderStatus> statuses);
 }
