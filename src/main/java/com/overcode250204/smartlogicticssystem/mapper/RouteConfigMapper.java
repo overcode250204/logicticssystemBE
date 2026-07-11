@@ -42,6 +42,7 @@ public class RouteConfigMapper {
                 .cutoffTime(entity.getCutoffTime())
                 .maxWaitingDays(entity.getMaxWaitingDays())
                 .provinceNames(provinceNames)
+                .isActive(entity.getIsActive())
                 .build();
     }
 
@@ -57,6 +58,7 @@ public class RouteConfigMapper {
         entity.setMinCapacityPercentage(request.getMinCapacityPercentage() != null ? request.getMinCapacityPercentage() : 80);
         entity.setCutoffTime(request.getCutoffTime());
         entity.setMaxWaitingDays(request.getMaxWaitingDays() != null ? request.getMaxWaitingDays() : 3);
+        entity.setIsActive(request.getIsActive() != null ? request.getIsActive() : true);
         
         return entity;
     }
@@ -78,6 +80,9 @@ public class RouteConfigMapper {
         
         if (request.getMaxWaitingDays() != null) {
             entity.setMaxWaitingDays(request.getMaxWaitingDays());
+        }
+        if (request.getIsActive() != null) {
+            entity.setIsActive(request.getIsActive());
         }
     }
 }

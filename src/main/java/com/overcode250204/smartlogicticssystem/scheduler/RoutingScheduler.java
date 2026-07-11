@@ -24,6 +24,9 @@ public class RoutingScheduler {
         log.info("Running scheduled routing checks...");
         List<RouteConfig> activeRoutes = routeConfigRepository.findAll();
         for (RouteConfig route : activeRoutes) {
+            if (route.getIsActive() != null && !route.getIsActive()) {
+                continue;
+            }
             try {
                 routingEngineService.checkRoutingCondition(route.getRouteId());
             } catch (Exception e) {

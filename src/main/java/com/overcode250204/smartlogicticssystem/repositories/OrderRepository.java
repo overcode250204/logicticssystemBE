@@ -14,4 +14,5 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     boolean existsByOrderCode(String orderCode);
     java.util.Optional<Order> findByOrderCode(String orderCode);
     List<Order> findByZone_ZoneIdAndStatusIn(Long zoneId, List<OrderStatus> statuses);
+    List<Order> findByStatus(OrderStatus status, org.springframework.data.domain.Sort sort);
 }

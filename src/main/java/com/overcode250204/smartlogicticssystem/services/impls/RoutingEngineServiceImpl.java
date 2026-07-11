@@ -4,6 +4,7 @@ import com.overcode250204.smartlogicticssystem.entities.*;
 import com.overcode250204.smartlogicticssystem.enums.LinehaulTripStatus;
 import com.overcode250204.smartlogicticssystem.enums.NotificationType;
 import com.overcode250204.smartlogicticssystem.enums.OrderStatus;
+import com.overcode250204.smartlogicticssystem.enums.VehicleStatus;
 import com.overcode250204.smartlogicticssystem.repositories.*;
 import com.overcode250204.smartlogicticssystem.services.IRoutingEngineService;
 import com.overcode250204.smartlogicticssystem.services.S3FileService;
@@ -31,6 +32,7 @@ public class RoutingEngineServiceImpl implements IRoutingEngineService {
     private final PalletRepository palletRepository;
     private final NotificationRepository notificationRepository;
     private final S3FileService s3FileService;
+    private final VehicleRepository vehicleRepository;
 
 
 
@@ -39,6 +41,7 @@ public class RoutingEngineServiceImpl implements IRoutingEngineService {
     public void checkRoutingCondition(Long routeId) {
         RouteConfig route = routeConfigRepository.findById(routeId).orElse(null);
         if (route == null) return;
+        if (route.getIsActive() != null && !route.getIsActive()) return;
 
         List<Order> newOrders = orderRepository.findByRouteConfigAndStatusOrderByCreatedAtAsc(route, OrderStatus.NEW);
         if (newOrders.isEmpty()) return;
@@ -127,7 +130,12 @@ public class RoutingEngineServiceImpl implements IRoutingEngineService {
         // Create Shipment Batch (LinehaulTrip)
         LinehaulTrip trip = new LinehaulTrip();
         trip.setRouteConfig(route);
-//        trip.setVehicle(route.getDefaultVehicle());
+        Vehicle vehicle = route.getDefaultVehicle();
+        if (vehicle != null) {
+            trip.setVehicle(vehicle);
+            vehicle.setStatus(VehicleStatus.ON_TRIP);
+            vehicleRepository.save(vehicle);
+        }
         trip.setStatus(LinehaulTripStatus.PREPARING);
         trip.setIsCreatedSystem(true);
         trip = linehaulTripRepository.save(trip);

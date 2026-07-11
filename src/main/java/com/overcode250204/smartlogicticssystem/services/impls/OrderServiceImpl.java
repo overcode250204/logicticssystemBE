@@ -5,6 +5,7 @@ import com.overcode250204.smartlogicticssystem.dtos.request.OrderCreateRequest;
 import com.overcode250204.smartlogicticssystem.dtos.request.OrderItemRequest;
 import com.overcode250204.smartlogicticssystem.dtos.response.OrderResponseDTO;
 import com.overcode250204.smartlogicticssystem.entities.*;
+import com.overcode250204.smartlogicticssystem.enums.OrderStatus;
 import com.overcode250204.smartlogicticssystem.events.OrderCreatedEvent;
 import com.overcode250204.smartlogicticssystem.exception.AppException;
 import com.overcode250204.smartlogicticssystem.exception.OrderErrorCode;
@@ -27,6 +28,7 @@ import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -159,5 +161,134 @@ public class OrderServiceImpl extends BaseServiceImpl implements IOrderService {
     private String uploadBarcodeImage(BarcodeGeneratorUtil.GeneratedCode128Barcode generatedBarcode) {
         String key = "%s/%s.png".formatted("order-barcodes", generatedBarcode.barcode());
         return s3FileService.uploadBytes(generatedBarcode.pngBytes(), key, "image/png");
+    }
+
+    @Override
+    public List<OrderResponseDTO> getAllOrders(int roleId, int userId) {
+        if (roleId != 1) {
+            throw new AppException(RoleErrorCode.ROLE_HAS_NO_PERMISSION);
+        }
+        List<Order> orders = orderRepository.findAll(org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "createdAt"));
+        List<OrderItem> allItems = orderItemRepository.findByOrderIn(orders);
+        java.util.Map<Long, List<OrderItem>> itemsByOrderId = allItems.stream()
+                .collect(Collectors.groupingBy(item -> item.getOrder().getOrderId()));
+        return orders.stream()
+                .map(order -> orderMapper.toResponse(order, itemsByOrderId.getOrDefault(order.getOrderId(), new ArrayList<>())))
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<OrderResponseDTO> getOrdersByStatus(OrderStatus status, int roleId, int userId) {
+        if (roleId != 1) {
+            throw new AppException(RoleErrorCode.ROLE_HAS_NO_PERMISSION);
+        }
+        List<Order> orders = orderRepository.findByStatus(status, org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "createdAt"));
+        if (orders.isEmpty()) return new ArrayList<>();
+        List<OrderItem> allItems = orderItemRepository.findByOrderIn(orders);
+        java.util.Map<Long, List<OrderItem>> itemsByOrderId = allItems.stream()
+                .collect(Collectors.groupingBy(item -> item.getOrder().getOrderId()));
+        return orders.stream()
+                .map(order -> orderMapper.toResponse(order, itemsByOrderId.getOrDefault(order.getOrderId(), new ArrayList<>())))
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public OrderResponseDTO getOrderById(Long id, int roleId, int userId) {
+        if (roleId != 1) {
+            throw new AppException(RoleErrorCode.ROLE_HAS_NO_PERMISSION);
+        }
+        Order order = findByIdOrThrow(orderRepository, id, OrderErrorCode.ORDER_NOT_FOUND);
+        List<OrderItem> items = orderItemRepository.findByOrderIn(List.of(order));
+        return orderMapper.toResponse(order, items);
+    }
+
+    @Override
+    @Transactional
+    public OrderResponseDTO cancelOrder(Long id, int roleId, int userId) {
+        if (roleId != 1) {
+            throw new AppException(RoleErrorCode.ROLE_HAS_NO_PERMISSION);
+        }
+        Order order = findByIdOrThrow(orderRepository, id, OrderErrorCode.ORDER_NOT_FOUND);
+        if (order.getStatus() != OrderStatus.NEW) {
+            throw new AppException(OrderErrorCode.ORDER_CANNOT_BE_MODIFIED);
+        }
+        order.setStatus(OrderStatus.CANCELLED);
+        Order savedOrder = orderRepository.save(order);
+        List<OrderItem> items = orderItemRepository.findByOrderIn(List.of(savedOrder));
+        return orderMapper.toResponse(savedOrder, items);
+    }
+
+    @Override
+    @Transactional
+    public OrderResponseDTO updateOrder(Long id, OrderCreateRequest request, int roleId, int userId) {
+        if (roleId != 1) {
+            throw new AppException(RoleErrorCode.ROLE_HAS_NO_PERMISSION);
+        }
+        Order order = findByIdOrThrow(orderRepository, id, OrderErrorCode.ORDER_NOT_FOUND);
+        if (order.getStatus() != OrderStatus.NEW) {
+            throw new AppException(OrderErrorCode.ORDER_CANNOT_BE_MODIFIED);
+        }
+
+        // Auto-Routing: Find route config by delivery province if it changed
+        if (!order.getDeliveryProvince().equals(request.getDeliveryProvince())) {
+            RouteProvince routeProvince = routeProvinceRepository.findByProvinceName(request.getDeliveryProvince());
+            if (routeProvince == null) {
+                throw new AppException(OrderErrorCode.DELIVERY_PROVINCE_UNSUPPORTED);
+            }
+            order.setRouteConfig(routeProvince.getRouteConfig());
+            order.setAssignedHub(routeProvince.getAssignedHub());
+        }
+
+        // Get zone to GROUP if location coordinates changed
+        boolean locationChanged = order.getDeliveryPoint() == null ||
+                !request.getLatitude().equals(order.getDeliveryPoint().getY()) ||
+                !request.getLongitude().equals(order.getDeliveryPoint().getX());
+        if (locationChanged) {
+            Zone zone = zoneRepository.findAreaContainingPoint(request.getLongitude(), request.getLatitude())
+                    .orElseThrow(() -> new AppException(OrderErrorCode.DELIVERY_PROVINCE_UNSUPPORTED));
+            order.setZone(zone);
+            Point deliveryPoint = geometryFactory.createPoint(new Coordinate(request.getLongitude(), request.getLatitude()));
+            deliveryPoint.setSRID(4326);
+            order.setDeliveryPoint(deliveryPoint);
+        }
+
+        order.setCustomerName(request.getCustomerName());
+        order.setPhone(request.getPhone());
+        order.setDeliveryAddress(request.getDeliveryAddress());
+        order.setDeliveryProvince(request.getDeliveryProvince());
+        order.setPaymentType(request.getPaymentType());
+
+        // Update items: First, remove old items
+        List<OrderItem> oldItems = orderItemRepository.findByOrderIn(List.of(order));
+        orderItemRepository.deleteAll(oldItems);
+
+        BigDecimal totalAmount = BigDecimal.ZERO;
+        BigDecimal totalWeight = BigDecimal.ZERO;
+        BigDecimal totalVolumeM3 = BigDecimal.ZERO;
+        List<OrderItem> items = new ArrayList<>();
+
+        for (OrderItemRequest itemRequest : request.getItems()) {
+            Product product = findByIdOrThrow(productRepository, itemRequest.getProductId(), OrderErrorCode.PRODUCT_NOT_FOUND);
+            OrderItem item = getOrderItem(itemRequest, order, product);
+
+            totalAmount = totalAmount.add(item.getTotalAmount());
+            totalVolumeM3 = totalVolumeM3.add(item.getVolumeM3().multiply(BigDecimal.valueOf(item.getQuantityOrdered())));
+            totalWeight = totalWeight.add(item.getWeightKg().multiply(BigDecimal.valueOf(item.getQuantityOrdered())));
+            items.add(item);
+        }
+
+        order.setTotalAmount(totalAmount);
+        order.setTotalWeightKg(totalWeight);
+        order.setTotalVolumeM3(totalVolumeM3);
+
+        Order savedOrder = orderRepository.save(order);
+        items = orderItemRepository.saveAll(items);
+
+        // Trigger Routing Engine if route configuration exists
+        if (savedOrder.getRouteConfig() != null) {
+            eventPublisher.publishEvent(new OrderCreatedEvent(this, savedOrder.getRouteConfig().getRouteId()));
+        }
+
+        return orderMapper.toResponse(savedOrder, items);
     }
 }

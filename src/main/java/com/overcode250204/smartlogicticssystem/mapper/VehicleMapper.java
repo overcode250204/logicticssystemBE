@@ -21,6 +21,8 @@ public class VehicleMapper {
                 .maxWeightKg(vehicle.getMaxWeightKg())
                 .maxVolumeM3(vehicle.getMaxVolumeM3())
                 .status(vehicle.getStatus())
+                .currentWarehouseId(vehicle.getCurrentWarehouse() != null ? vehicle.getCurrentWarehouse().getWarehouseId() : null)
+                .currentWarehouseName(vehicle.getCurrentWarehouse() != null ? vehicle.getCurrentWarehouse().getName() : null)
                 .build();
     }
 

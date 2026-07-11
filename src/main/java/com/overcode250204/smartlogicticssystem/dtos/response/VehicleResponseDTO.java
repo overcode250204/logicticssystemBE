@@ -16,4 +16,6 @@ public class VehicleResponseDTO {
     private BigDecimal maxWeightKg;
     private BigDecimal maxVolumeM3;
     private VehicleStatus status;
+    private Long currentWarehouseId;
+    private String currentWarehouseName;
 }

@@ -9,4 +9,6 @@ import java.util.List;
 @Repository
 public interface LocalTripDetailRepository extends JpaRepository<LocalTripDetail, Long> {
     List<LocalTripDetail> findByLocalTrip_LocalTripIdOrderByStopOrderAsc(Long localTripId);
+
+    List<LocalTripDetail> findByLocalTrip_LocalTripId(Long localTripId);
 }

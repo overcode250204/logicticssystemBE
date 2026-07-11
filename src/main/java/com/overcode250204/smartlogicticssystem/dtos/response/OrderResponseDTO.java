@@ -30,4 +30,5 @@ public class OrderResponseDTO {
     private BigDecimal totalVolumeM3;
     private LocalDateTime createdAt;
     private List<OrderItemResponseDTO> items;
+    private String proofUrl;
 }

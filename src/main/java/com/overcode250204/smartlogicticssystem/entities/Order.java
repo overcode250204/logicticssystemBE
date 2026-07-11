@@ -73,4 +73,7 @@ public class Order {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "zone_id")
     private Zone zone;
+
+    @Column(name = "proof_url", length = 500)
+    private String proofUrl;
 }

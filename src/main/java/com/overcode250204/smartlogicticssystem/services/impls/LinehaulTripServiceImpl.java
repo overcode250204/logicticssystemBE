@@ -88,7 +88,7 @@ public class LinehaulTripServiceImpl extends BaseServiceImpl implements ILinehau
 
         //MAP VEHICLE
         linehaulTrip.setVehicle(mapVehicle(request.getVehicleId()));
-        // todo check constraint of vehicle for trip if have pallet
+        
 
         if (request.getLinehaulTripDriverUpdateRequests() != null) {
             List<Long> newDriverIds = request.getLinehaulTripDriverUpdateRequests().stream()
@@ -349,6 +349,10 @@ public class LinehaulTripServiceImpl extends BaseServiceImpl implements ILinehau
             throw new AppException(LinehaulTripErrorCode.LINEHAUL_TRIP_CAN_NOT_EN_ROUTE);
         }
 
+        if (linehaulTrip.getVehicle() == null) {
+            throw new AppException(VehicleErrorCode.VEHICLE_NOT_FOUND);
+        }
+
         if (linehaulTrip.getPallets() == null || linehaulTrip.getPallets().isEmpty()) {
             throw new AppException(LinehaulTripErrorCode.LINEHAUL_TRIP_CAN_NOT_EN_ROUTE);
         }
@@ -376,6 +380,20 @@ public class LinehaulTripServiceImpl extends BaseServiceImpl implements ILinehau
 
         linehaulTrip.setStatus(LinehaulTripStatus.EN_ROUTE);
         linehaulTrip.setDepartureTime(LocalDateTime.now());
+
+        Vehicle vehicle = linehaulTrip.getVehicle();
+        if (vehicle != null) {
+            vehicle.setStatus(VehicleStatus.ON_TRIP);
+            vehicle.setCurrentWarehouse(null);
+            vehicleRepository.save(vehicle);
+        }
+
+        for (LinehaulTripDriver tripDriver : linehaulTrip.getTripDrivers()) {
+            Driver driver = tripDriver.getDriver();
+            driver.setStatus(DriverStatus.ON_LINEHAUL_TRIP);
+            driver.setCurrentWarehouse(null);
+            driverRepository.save(driver);
+        }
 
         //Change status of pallet
         for (Pallet pallet : linehaulTrip.getPallets()) {
@@ -432,6 +450,13 @@ public class LinehaulTripServiceImpl extends BaseServiceImpl implements ILinehau
         linehaulTrip.setArrivalTime(LocalDateTime.now());
 
         // ============================
+        Vehicle vehicle = linehaulTrip.getVehicle();
+        if (vehicle != null) {
+            vehicle.setStatus(VehicleStatus.ACTIVE);
+            vehicle.setCurrentWarehouse(toWarehouse);
+            vehicleRepository.save(vehicle);
+        }
+
         //Change status driver
         for (LinehaulTripDriver tripDriver : linehaulTrip.getTripDrivers()) {
             Driver driver = tripDriver.getDriver();

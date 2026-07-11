@@ -10,6 +10,9 @@ import com.overcode250204.smartlogicticssystem.exception.RoleErrorCode;
 import com.overcode250204.smartlogicticssystem.exception.VehicleErrorCode;
 import com.overcode250204.smartlogicticssystem.mapper.VehicleMapper;
 import com.overcode250204.smartlogicticssystem.repositories.VehicleRepository;
+import com.overcode250204.smartlogicticssystem.repositories.WarehouseRepository;
+import com.overcode250204.smartlogicticssystem.entities.Warehouse;
+import com.overcode250204.smartlogicticssystem.exception.WarehouseErrorCode;
 import com.overcode250204.smartlogicticssystem.services.IVehicleService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -22,6 +25,7 @@ import java.util.stream.Collectors;
 public class VehicleServiceImpl extends BaseServiceImpl implements IVehicleService {
 
     private final VehicleRepository vehicleRepository;
+    private final WarehouseRepository warehouseRepository;
     private final VehicleMapper vehicleMapper;
 
     private void checkAdminRole(int roleId) {
@@ -52,6 +56,10 @@ public class VehicleServiceImpl extends BaseServiceImpl implements IVehicleServi
             throw new AppException(VehicleErrorCode.LICENSE_PLATE_ALREADY_EXISTS);
         }
         Vehicle vehicle = vehicleMapper.toEntity(request);
+        if (request.getCurrentWarehouseId() != null) {
+            Warehouse warehouse = findByIdOrThrow(warehouseRepository, request.getCurrentWarehouseId(), WarehouseErrorCode.WAREHOUSE_NOT_FOUND);
+            vehicle.setCurrentWarehouse(warehouse);
+        }
         Vehicle savedVehicle = vehicleRepository.save(vehicle);
         return vehicleMapper.toResponse(savedVehicle);
     }
@@ -67,6 +75,12 @@ public class VehicleServiceImpl extends BaseServiceImpl implements IVehicleServi
         }
 
         vehicleMapper.updateEntity(request, vehicle);
+        if (request.getCurrentWarehouseId() != null) {
+            Warehouse warehouse = findByIdOrThrow(warehouseRepository, request.getCurrentWarehouseId(), WarehouseErrorCode.WAREHOUSE_NOT_FOUND);
+            vehicle.setCurrentWarehouse(warehouse);
+        } else {
+            vehicle.setCurrentWarehouse(null);
+        }
         Vehicle updatedVehicle = vehicleRepository.save(vehicle);
         return vehicleMapper.toResponse(updatedVehicle);
     }

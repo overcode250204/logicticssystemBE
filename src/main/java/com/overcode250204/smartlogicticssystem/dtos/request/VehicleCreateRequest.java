@@ -23,4 +23,6 @@ public class VehicleCreateRequest {
     private BigDecimal maxVolumeM3;
 
     private VehicleStatus status;
+
+    private Long currentWarehouseId;
 }

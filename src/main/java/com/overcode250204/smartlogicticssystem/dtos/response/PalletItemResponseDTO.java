@@ -11,7 +11,7 @@ public class PalletItemResponseDTO {
 
     private Long id;
 
-    private Long orderId;
+    private OrderResponseDTO order;
 
     private LocalDateTime scannedAt;
 }

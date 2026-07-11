@@ -52,6 +52,9 @@ public class RouteConfig {
     @Column(name = "max_waiting_days")
     private Integer maxWaitingDays = 3;
 
+    @Column(name = "is_active")
+    private Boolean isActive = true;
+
     @OneToMany(mappedBy = "routeConfig", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<RouteProvince> routeProvinces = new ArrayList<>();
 }

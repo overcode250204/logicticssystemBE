@@ -2,17 +2,21 @@ package com.overcode250204.smartlogicticssystem.services;
 
 import com.overcode250204.smartlogicticssystem.entities.LocalTrip;
 
+import com.overcode250204.smartlogicticssystem.dtos.response.LocalTripResponseDTO;
 import java.util.List;
 
 public interface ILocalTripService {
-    List<LocalTrip> planLocalTrips(Long zoneId, List<Long> orderIds);
+    List<LocalTripResponseDTO> planLocalTrips();
+    List<LocalTripResponseDTO> getAllLocalTrips();
+    LocalTripResponseDTO getLocalTripById(Long id);
     void acceptTrip(Long driverId, Long tripId);
     void cancelTrip(Long driverId, Long tripId);
     void collapseTrip(Long cancelledTripId, Long targetTripId);
     void changeVehicle(Long tripId, Long newVehicleId);
-    void scanBarcode(Long tripId, Long orderId, String barcode);
+    void changeDriver(Long tripId, Long driverId);
+    void scanBarcode(Long driverId, Long tripId, Long orderId, String barcode);
     void startExecuting(Long driverId, Long tripId);
-    void arriveAtPoint(Long driverId, Long detailId, double lat, double lon);
-    void completePoint(Long driverId, Long detailId, String proofUrl);
-    void failPoint(Long driverId, Long detailId, String proofUrl);
+    void arriveAtPoint(Long driverId, Long tripId, Long detailId, double lat, double lon);
+    void completePoint(Long driverId, Long tripId, Long detailId, String proofUrl);
+    void failPoint(Long driverId, Long tripId, Long detailId, String proofUrl);
 }

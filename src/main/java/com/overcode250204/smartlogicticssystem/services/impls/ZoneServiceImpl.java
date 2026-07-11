@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.wololo.jts2geojson.GeoJSONReader;
 import tools.jackson.databind.ObjectMapper;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -33,6 +34,7 @@ public class ZoneServiceImpl extends BaseServiceImpl implements IZoneService {
         Zone zone = Zone.builder()
                 .name(request.getName())
                 .polygon(polygon)
+                .createAt(LocalDateTime.now())
                 .build();
         zone = zoneRepository.save(zone);
 
