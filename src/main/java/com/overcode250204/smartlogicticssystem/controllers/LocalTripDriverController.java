@@ -2,12 +2,15 @@ package com.overcode250204.smartlogicticssystem.controllers;
 
 import com.overcode250204.smartlogicticssystem.base.BaseController;
 import com.overcode250204.smartlogicticssystem.base.BaseResponse;
+import com.overcode250204.smartlogicticssystem.dtos.response.LocalTripResponseDTO;
 import com.overcode250204.smartlogicticssystem.services.ILocalTripService;
 import com.overcode250204.smartlogicticssystem.services.S3FileService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/driver/local-trips")
@@ -16,6 +19,11 @@ public class LocalTripDriverController extends BaseController {
 
     private final ILocalTripService localTripService;
     private final S3FileService s3FileService;
+
+    @GetMapping
+    public ResponseEntity<BaseResponse<List<LocalTripResponseDTO>>> getDriverLocalTrips(@RequestHeader("driverId") Long driverId) {
+        return success(localTripService.getLocalTripsByDriverId(driverId), "Driver local trips retrieved successfully");
+    }
 
     @PutMapping("/{tripId}/accept")
     public ResponseEntity<BaseResponse<Void>> acceptTrip(@RequestHeader("driverId") Long driverId, @PathVariable Long tripId) {

@@ -10,4 +10,5 @@ import java.util.List;
 @Repository
 public interface LocalTripRepository extends JpaRepository<LocalTrip, Long> {
     List<LocalTrip> findByStatus(LocalTripStatus status);
+    List<LocalTrip> findByDriver_DriverId(Long driverId);
 }

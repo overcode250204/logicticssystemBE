@@ -187,6 +187,12 @@ public class LocalTripServiceImpl implements ILocalTripService {
 
     @Override
     @Transactional(readOnly = true)
+    public List<LocalTripResponseDTO> getLocalTripsByDriverId(Long driverId) {
+        return localTripRepository.findByDriver_DriverId(driverId).stream().map(localTripMapper::toResponseDTO).collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public LocalTripResponseDTO getLocalTripById(Long id) {
         LocalTrip trip = localTripRepository.findById(id).orElseThrow();
         return localTripMapper.toResponseDTO(trip);

@@ -8,6 +8,7 @@ import java.util.List;
 public interface ILocalTripService {
     List<LocalTripResponseDTO> planLocalTrips();
     List<LocalTripResponseDTO> getAllLocalTrips();
+    List<LocalTripResponseDTO> getLocalTripsByDriverId(Long driverId);
     LocalTripResponseDTO getLocalTripById(Long id);
     void acceptTrip(Long driverId, Long tripId);
     void cancelTrip(Long driverId, Long tripId);
