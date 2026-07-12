@@ -15,6 +15,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.overcode250204.smartlogicticssystem.dtos.request.FailPointRequestDTO;
+import com.overcode250204.smartlogicticssystem.exception.AppException;
+import com.overcode250204.smartlogicticssystem.exception.ExceptionReasonErrorCode;
 import java.time.Duration;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -32,6 +35,8 @@ public class LocalTripServiceImpl implements ILocalTripService {
     private final OsrmRoutingService osrmRoutingService;
     private final ZoneRepository zoneRepository;
     private final LocalTripMapper localTripMapper;
+    private final ExceptionReasonRepository exceptionReasonRepository;
+    private final OrderExceptionRepository orderExceptionRepository;
 
     @Override
     @Transactional
@@ -562,7 +567,7 @@ public class LocalTripServiceImpl implements ILocalTripService {
 
     @Override
     @Transactional
-    public void failPoint(Long driverId, Long tripId, Long detailId, String proofUrl) {
+    public void failPoint(Long driverId, Long tripId, Long detailId, String proofUrl, FailPointRequestDTO data) {
         LocalTrip trip = localTripRepository.findById(tripId).orElseThrow();
         if (trip.getStatus() != LocalTripStatus.EXECUTING) {
             throw new IllegalStateException("Trip must be EXECUTING.");
@@ -575,6 +580,9 @@ public class LocalTripServiceImpl implements ILocalTripService {
             throw new IllegalArgumentException("Driver mismatch.");
         }
         
+        ExceptionReason exceptionReason = exceptionReasonRepository.findById(data.getReasonId())
+                .orElseThrow(() -> new AppException(ExceptionReasonErrorCode.EXCEPTION_REASON_NOT_FOUND));
+
         detail.setStatus(LocalTripDetailStatus.FAILED);
         detail.setProofUrl(proofUrl);
         localTripDetailRepository.save(detail);
@@ -585,6 +593,17 @@ public class LocalTripServiceImpl implements ILocalTripService {
         order.setActualDeliveryTime(java.time.LocalDateTime.now());
         orderRepository.save(order);
         
+        Driver driver = trip.getDriver();
+        User reportedBy = driver != null ? driver.getUser() : null;
+
+        OrderException orderException = new OrderException();
+        orderException.setOrder(order);
+        orderException.setExceptionReason(exceptionReason);
+        orderException.setReportedBy(reportedBy);
+        orderException.setNotes(data.getNotes());
+        orderException.setImageUrl(proofUrl);
+        orderExceptionRepository.save(orderException);
+
         checkTripCompletion(tripId);
     }
     

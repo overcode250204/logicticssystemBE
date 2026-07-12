@@ -10,6 +10,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.overcode250204.smartlogicticssystem.dtos.request.FailPointRequestDTO;
+import jakarta.validation.Valid;
 import java.util.List;
 
 @RestController
@@ -66,9 +68,10 @@ public class LocalTripDriverController extends BaseController {
 
     @PutMapping(value = "/{tripId}/details/{detailId}/fail", consumes = org.springframework.http.MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<BaseResponse<Void>> failPoint(@RequestHeader("driverId") Long driverId, @PathVariable Long tripId, @PathVariable Long detailId,
-                                          @RequestPart("proofImage") MultipartFile proofImage) {
+                                          @RequestPart("proofImage") MultipartFile proofImage,
+                                          @RequestPart("data") @Valid FailPointRequestDTO data) {
         String proofUrl = s3FileService.uploadFile(proofImage, "proofs");
-        localTripService.failPoint(driverId, tripId, detailId, proofUrl);
+        localTripService.failPoint(driverId, tripId, detailId, proofUrl, data);
         return success(null, "Point failed successfully");
     }
 }
