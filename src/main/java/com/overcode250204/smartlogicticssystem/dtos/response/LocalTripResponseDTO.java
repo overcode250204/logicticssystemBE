@@ -17,4 +17,6 @@ public class LocalTripResponseDTO {
     private LocalTripStatus status;
     private LocalDateTime createdAt;
     private List<LocalTripDetailResponseDTO> details;
+    private String localTripCode;
+    private Integer vrpEstimatedMinutes;
 }

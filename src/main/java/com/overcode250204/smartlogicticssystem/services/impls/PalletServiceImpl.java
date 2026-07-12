@@ -159,14 +159,51 @@ public class PalletServiceImpl extends BaseServiceImpl implements IPalletService
         BigDecimal newTotalVolume = pallet.getTotalVolumeM3().add(order.getTotalVolumeM3());
 
         RouteConfig routeConfig = pallet.getRouteConfig();
-        //Check constraint vehicle of route config compare with current total weight and total volume
-        if (routeConfig.getDefaultVehicle() != null) {
-            Vehicle vehicle = routeConfig.getDefaultVehicle();
-            if (vehicle.getMaxWeightKg() != null && newTotalWeight.compareTo(vehicle.getMaxWeightKg()) > 0) {
-                throw new AppException(PalletErrorCode.CAPACITY_EXCEEDED);
+        //Check constraint vehicle: prioritize linehaulTrip's vehicle, fallback to default vehicle of route config
+        Vehicle vehicle = null;
+        boolean hasLinehaulTripVehicle = false;
+
+        if (pallet.getLinehaulTrip() != null) {
+            LinehaulTrip linehaulTrip = pallet.getLinehaulTrip();
+            if (linehaulTrip.getVehicle() != null) {
+                vehicle = linehaulTrip.getVehicle();
+                hasLinehaulTripVehicle = true;
+            } else if (linehaulTrip.getRouteConfig() != null && linehaulTrip.getRouteConfig().getDefaultVehicle() != null) {
+                vehicle = linehaulTrip.getRouteConfig().getDefaultVehicle();
+                hasLinehaulTripVehicle = true;
             }
-            if (vehicle.getMaxVolumeM3() != null && newTotalVolume.compareTo(vehicle.getMaxVolumeM3()) > 0) {
-                throw new AppException(PalletErrorCode.CAPACITY_EXCEEDED);
+        }
+
+        if (!hasLinehaulTripVehicle && routeConfig != null && routeConfig.getDefaultVehicle() != null) {
+            vehicle = routeConfig.getDefaultVehicle();
+        }
+
+        if (vehicle != null) {
+            if (hasLinehaulTripVehicle) {
+                LinehaulTrip linehaulTrip = pallet.getLinehaulTrip();
+                BigDecimal currentTripWeight = linehaulTrip.getPallets().stream()
+                        .map(Pallet::getTotalWeightKg)
+                        .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
+                BigDecimal newTripWeight = currentTripWeight.add(order.getTotalWeightKg());
+
+                BigDecimal currentTripVolume = linehaulTrip.getPallets().stream()
+                        .map(Pallet::getTotalVolumeM3)
+                        .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
+                BigDecimal newTripVolume = currentTripVolume.add(order.getTotalVolumeM3());
+
+                if (vehicle.getMaxWeightKg() != null && newTripWeight.compareTo(vehicle.getMaxWeightKg()) > 0) {
+                    throw new AppException(PalletErrorCode.CAPACITY_EXCEEDED);
+                }
+                if (vehicle.getMaxVolumeM3() != null && newTripVolume.compareTo(vehicle.getMaxVolumeM3()) > 0) {
+                    throw new AppException(PalletErrorCode.CAPACITY_EXCEEDED);
+                }
+            } else {
+                if (vehicle.getMaxWeightKg() != null && newTotalWeight.compareTo(vehicle.getMaxWeightKg()) > 0) {
+                    throw new AppException(PalletErrorCode.CAPACITY_EXCEEDED);
+                }
+                if (vehicle.getMaxVolumeM3() != null && newTotalVolume.compareTo(vehicle.getMaxVolumeM3()) > 0) {
+                    throw new AppException(PalletErrorCode.CAPACITY_EXCEEDED);
+                }
             }
         }
 
@@ -193,8 +230,8 @@ public class PalletServiceImpl extends BaseServiceImpl implements IPalletService
         Pallet pallet = palletRepository.findByIdWithItemsAndOrders(palletId)
                 .orElseThrow(() -> new AppException(PalletErrorCode.PALLET_NOT_FOUND));
 
-        //Pallet status must be CREATING
-        if (pallet.getStatus() != PalletStatus.CREATING) {
+        //Pallet status must be CAN_SEAL
+        if (pallet.getStatus() != PalletStatus.CAN_SEAL) {
             throw new AppException(PalletErrorCode.PALLET_CANNOT_UPDATE);
         }
 
@@ -271,7 +308,7 @@ public class PalletServiceImpl extends BaseServiceImpl implements IPalletService
 
         Pallet pallet = findByIdOrThrow(palletRepository, palletId, PalletErrorCode.PALLET_NOT_FOUND);
 
-        if (pallet.getStatus() != PalletStatus.CREATING) {
+        if (pallet.getStatus() != PalletStatus.CAN_SEAL) {
             throw new AppException(PalletErrorCode.PALLET_CANNOT_UPDATE);
         }
 
@@ -374,5 +411,24 @@ public class PalletServiceImpl extends BaseServiceImpl implements IPalletService
 
         order.setStatus(OrderStatus.ARRIVED_AT_HUB);
         orderRepository.save(order);
+    }
+
+    @Override
+    @Transactional
+    public PalletResponseDTO updateStatusToCanSeal(Long palletId, int roleId, int userId) {
+        checkAdminRole(roleId);
+        Pallet pallet = findByIdOrThrow(palletRepository, palletId, PalletErrorCode.PALLET_NOT_FOUND);
+
+        if (pallet.getStatus() != PalletStatus.CREATING) {
+            throw new AppException(PalletErrorCode.PALLET_CANNOT_UPDATE);
+        }
+
+        if (pallet.getPalletItems().isEmpty()) {
+            throw new AppException(PalletErrorCode.PALLET_CANNOT_UPDATE);
+        }
+
+        pallet.setStatus(PalletStatus.CAN_SEAL);
+        Pallet saved = palletRepository.save(pallet);
+        return palletMapper.toResponse(saved);
     }
 }

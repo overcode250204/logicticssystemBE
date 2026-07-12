@@ -16,4 +16,5 @@ public class DeliveryOrder {
     private DeliveryLocation location;
     private BigDecimal weightKg;
     private BigDecimal volumeM3;
+    private Integer zoneSlaHours;
 }

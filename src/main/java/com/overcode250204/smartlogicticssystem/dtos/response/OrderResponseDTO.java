@@ -31,4 +31,6 @@ public class OrderResponseDTO {
     private LocalDateTime createdAt;
     private List<OrderItemResponseDTO> items;
     private String proofUrl;
+    private LocalDateTime expectedDeliveryTime;
+    private LocalDateTime actualDeliveryTime;
 }

@@ -39,4 +39,6 @@ public interface IPalletService {
     PalletResponseDTO confirmPalletArrival(String palletCode, Double latitude, Double longitude, int roleId, int userId);
 
     void confirmOrderArrival(String orderCode, Double latitude, Double longitude, int roleId, int userId);
+
+    PalletResponseDTO updateStatusToCanSeal(Long palletId, int roleId, int userId);
 }

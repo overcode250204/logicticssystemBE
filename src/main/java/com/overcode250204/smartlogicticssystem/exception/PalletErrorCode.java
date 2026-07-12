@@ -17,8 +17,8 @@ public enum PalletErrorCode implements BaseErrorCode {
     ORDER_MISMATCH(HttpStatus.BAD_REQUEST, Messages.ORDER_MISMATCH),
     ORDER_ALREADY_SCANNED(HttpStatus.BAD_REQUEST, Messages.ORDER_ALREADY_SCANNED),
     PALLET_AlREADY_ASSIGNED(HttpStatus.BAD_REQUEST, Messages.PALLET_AlREADY_ASSIGNED),
-    PALLET_NOT_IN_TRANSIT(HttpStatus.BAD_REQUEST, Messages.PALLET_NOT_IN_TRANSIT);
-
+    PALLET_NOT_IN_TRANSIT(HttpStatus.BAD_REQUEST, Messages.PALLET_NOT_IN_TRANSIT),
+    PALLET_EMPTY(HttpStatus.BAD_REQUEST, Messages.PALLET_EMPTY);
 
 
 
@@ -44,5 +44,6 @@ public enum PalletErrorCode implements BaseErrorCode {
         public static final String ORDER_ALREADY_SCANNED = "Order already scanned";
         public static final String PALLET_AlREADY_ASSIGNED = "Pallet already assigned to other trip";
         public static final String PALLET_NOT_IN_TRANSIT = "Pallet must be in transit";
+        public static final String PALLET_EMPTY = "Pallet must contain at least one item";
     }
 }

@@ -13,4 +13,5 @@ public class LocalTripDetailResponseDTO {
     private String proofUrl;
     private Boolean barcodeScanned;
     private LocalTripDetailStatus status;
+    private String localTripDetailCode;
 }

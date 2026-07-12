@@ -17,4 +17,6 @@ public class ZoneResponseDTO {
     private Map<String, Object> coverageArea;
 
     private LocalDateTime createAt;
+
+    private Integer slaHours;
 }

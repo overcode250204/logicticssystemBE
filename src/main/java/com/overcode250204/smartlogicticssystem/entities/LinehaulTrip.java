@@ -52,4 +52,7 @@ public class LinehaulTrip {
 
     @Column(name = "is_created_system")
     private Boolean isCreatedSystem;
+
+    @Column(name = "linehaul_trip_code", unique = true, length = 20)
+    private String linehaulTripCode;
 }

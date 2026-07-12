@@ -5,6 +5,7 @@ import lombok.Builder;
 import lombok.Data;
 
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 
 @Data
 @Builder
@@ -17,4 +18,5 @@ public class WarehouseResponseDTO {
     private Double latitude;
     private Double longitude;
     private LocalDateTime createdAt;
+    private LocalTime startDeliveryTime;
 }

@@ -11,6 +11,7 @@ public class LinehaulTripMapper {
     private final VehicleMapper vehicleMapper;
     private final RouteConfigMapper routeConfigMapper;
     private final LinehaulTripDriverMapper driverMapper;
+    private final PalletItemMapper palletItemMapper;
 
 
     public LinehaulTripResponseDTO toResponse(LinehaulTrip entity) {
@@ -37,12 +38,14 @@ public class LinehaulTripMapper {
                                         .status(p.getStatus())
                                         .createdAt(p.getCreatedAt())
                                         .isCreatedSystem(p.getIsCreatedSystem())
+                                        .palletItems(p.getPalletItems() != null ? p.getPalletItems().stream().map(palletItemMapper::toResponse).toList() : null)
                                         .build())
                                 .toList() : null)
                 .vehicle(vehicleMapper.toResponse(entity.getVehicle()))
                 .status(entity.getStatus())
                 .departureTime(entity.getDepartureTime())
                 .arrivalTime(entity.getArrivalTime())
+                .linehaulTripCode(entity.getLinehaulTripCode())
                 .build();
     }
 

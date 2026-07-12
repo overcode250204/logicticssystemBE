@@ -11,4 +11,6 @@ public interface LocalTripDetailRepository extends JpaRepository<LocalTripDetail
     List<LocalTripDetail> findByLocalTrip_LocalTripIdOrderByStopOrderAsc(Long localTripId);
 
     List<LocalTripDetail> findByLocalTrip_LocalTripId(Long localTripId);
+
+    boolean existsByLocalTripDetailCode(String localTripDetailCode);
 }

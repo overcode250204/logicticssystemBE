@@ -14,7 +14,8 @@ public class DeliveryConstraintProvider implements ConstraintProvider {
         return new Constraint[]{
                 vehicleWeightCapacity(constraintFactory),
                 vehicleVolumeCapacity(constraintFactory),
-                minimizeDistance(constraintFactory)
+                minimizeDistance(constraintFactory),
+                checkSlaConstraint(constraintFactory)
         };
     }
 
@@ -72,5 +73,50 @@ public class DeliveryConstraintProvider implements ConstraintProvider {
                             return totalDistance;
                         })
                 .asConstraint("minimizeDistance");
+    }
+
+    protected Constraint checkSlaConstraint(ConstraintFactory factory) {
+        return factory.forEach(DeliveryVehicle.class)
+                .filter(vehicle -> {
+                    double currentEta = 0.0;
+                    DeliveryLocation previousLocation = vehicle.getStartLocation();
+                    for (DeliveryOrder order : vehicle.getOrders()) {
+                        double travelTimeSeconds = previousLocation.getDurationTo(order.getLocation());
+                        double travelTimeMinutes = travelTimeSeconds / 60.0;
+                        currentEta += travelTimeMinutes;
+                        
+                        Integer slaHours = order.getZoneSlaHours();
+                        if (slaHours != null) {
+                            double slaMinutes = slaHours * 60.0;
+                            if (currentEta > slaMinutes) {
+                                return true;
+                            }
+                        }
+                        previousLocation = order.getLocation();
+                    }
+                    return false;
+                })
+                .penalizeLong(HardSoftLongScore.ONE_HARD,
+                        vehicle -> {
+                            long penalty = 0;
+                            double currentEta = 0.0;
+                            DeliveryLocation previousLocation = vehicle.getStartLocation();
+                            for (DeliveryOrder order : vehicle.getOrders()) {
+                                double travelTimeSeconds = previousLocation.getDurationTo(order.getLocation());
+                                double travelTimeMinutes = travelTimeSeconds / 60.0;
+                                currentEta += travelTimeMinutes;
+                                
+                                Integer slaHours = order.getZoneSlaHours();
+                                if (slaHours != null) {
+                                    double slaMinutes = slaHours * 60.0;
+                                    if (currentEta > slaMinutes) {
+                                        penalty += (long) (currentEta - slaMinutes);
+                                    }
+                                }
+                                previousLocation = order.getLocation();
+                            }
+                            return penalty > 0 ? penalty : 1L;
+                        })
+                .asConstraint("checkSlaConstraint");
     }
 }

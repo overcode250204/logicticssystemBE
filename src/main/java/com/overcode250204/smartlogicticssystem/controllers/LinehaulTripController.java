@@ -90,5 +90,12 @@ public class LinehaulTripController extends BaseController {
                                                                             @RequestHeader(name = "X-User-Id") int userId) {
         return success(linehaulTripService.finishTrip(id, request, roleId, userId), "Trip finished successfully");
     }
+
+    @PostMapping("/{id}/can-start")
+    public ResponseEntity<BaseResponse<LinehaulTripResponseDTO>> updateStatusToCanStart(@PathVariable Long id,
+                                                                                       @RequestHeader(name = "X-Role-Id") int roleId,
+                                                                                       @RequestHeader(name = "X-User-Id") int userId) {
+        return success(linehaulTripService.updateStatusToCanStart(id, roleId, userId), "Trip status updated to CAN_START successfully");
+    }
 }
 

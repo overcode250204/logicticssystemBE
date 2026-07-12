@@ -25,5 +25,7 @@ public interface ILinehaulTripService {
     LinehaulTripResponseDTO dispatchTrip(Long id, com.overcode250204.smartlogicticssystem.dtos.request.LinehaulTripGpsRequest request, int roleId, int userId);
 
     LinehaulTripResponseDTO finishTrip(Long id, com.overcode250204.smartlogicticssystem.dtos.request.LinehaulTripGpsRequest request, int roleId, int userId);
+
+    LinehaulTripResponseDTO updateStatusToCanStart(Long id, int roleId, int userId);
 }
 

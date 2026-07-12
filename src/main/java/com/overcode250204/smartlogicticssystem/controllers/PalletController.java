@@ -104,4 +104,12 @@ public class PalletController extends BaseController {
             @RequestHeader(name = "X-User-Id") int userId) {
         return success(palletService.scanPalletItem(palletId, orderCode, roleId, userId), "Pallet item scanned successfully");
     }
+
+    @PostMapping("/{palletId}/can-seal")
+    public ResponseEntity<BaseResponse<PalletResponseDTO>> updateStatusToCanSeal(
+            @PathVariable Long palletId,
+            @RequestHeader(name = "X-Role-Id") int roleId,
+            @RequestHeader(name = "X-User-Id") int userId) {
+        return success(palletService.updateStatusToCanSeal(palletId, roleId, userId), "Pallet status updated to CAN_SEAL successfully");
+    }
 }

@@ -1,7 +1,6 @@
 package com.overcode250204.smartlogicticssystem.entities;
 
 
-import com.overcode250204.smartlogicticssystem.enums.AssignmentStatus;
 import com.overcode250204.smartlogicticssystem.enums.DriverRole;
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -29,10 +28,6 @@ public class LinehaulTripDriver {
     @Enumerated(EnumType.STRING)
     @Column(length = 20)
     private DriverRole role;
-
-    @Enumerated(EnumType.STRING)
-    @Column(length = 20)
-    private AssignmentStatus assignmentStatus;
 
     private LocalDateTime assignedAt;
 }

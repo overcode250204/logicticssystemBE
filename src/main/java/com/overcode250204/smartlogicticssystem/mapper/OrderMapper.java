@@ -58,6 +58,8 @@ public class OrderMapper {
                 .totalWeightKg(entity.getTotalWeightKg())
                 .totalVolumeM3(entity.getTotalVolumeM3())
                 .proofUrl(entity.getProofUrl())
+                .expectedDeliveryTime(entity.getExpectedDeliveryTime())
+                .actualDeliveryTime(entity.getActualDeliveryTime())
                 .build();
     }
 

@@ -55,6 +55,9 @@ public class RouteConfig {
     @Column(name = "is_active")
     private Boolean isActive = true;
 
+    @Column(name = "sla_hours")
+    private Integer slaHours;
+
     @OneToMany(mappedBy = "routeConfig", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<RouteProvince> routeProvinces = new ArrayList<>();
 }

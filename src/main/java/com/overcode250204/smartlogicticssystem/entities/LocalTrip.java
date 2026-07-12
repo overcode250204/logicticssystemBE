@@ -36,4 +36,10 @@ public class LocalTrip {
 
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt = LocalDateTime.now();
+
+    @Column(name = "local_trip_code", unique = true, length = 20)
+    private String localTripCode;
+
+    @Column(name = "vrp_estimated_minutes")
+    private Integer vrpEstimatedMinutes;
 }

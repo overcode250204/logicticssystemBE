@@ -74,6 +74,14 @@ public class Order {
     @JoinColumn(name = "zone_id")
     private Zone zone;
 
+    private LocalDateTime estimatedDeliveryTime;
+
+    @Column(name = "expected_delivery_time")
+    private LocalDateTime expectedDeliveryTime;
+
+    @Column(name = "actual_delivery_time")
+    private LocalDateTime actualDeliveryTime;
+
     @Column(name = "proof_url", length = 500)
     private String proofUrl;
 }

@@ -35,6 +35,7 @@ public class ZoneServiceImpl extends BaseServiceImpl implements IZoneService {
                 .name(request.getName())
                 .polygon(polygon)
                 .createAt(LocalDateTime.now())
+                .slaHours(request.getSlaHours())
                 .build();
         zone = zoneRepository.save(zone);
 
@@ -46,6 +47,9 @@ public class ZoneServiceImpl extends BaseServiceImpl implements IZoneService {
         Zone zone = zoneRepository.findById(id).orElseThrow(() -> new RuntimeException("Zone not found"));
         if (request.getName() != null) {
             zone.setName(request.getName());
+        }
+        if (request.getSlaHours() != null) {
+            zone.setSlaHours(request.getSlaHours());
         }
         ObjectMapper mapper = new ObjectMapper();
         String geoJson = mapper.writeValueAsString(request.getCoverageArea());

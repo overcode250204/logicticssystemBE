@@ -111,20 +111,25 @@ public class LocalTripServiceImpl implements ILocalTripService {
             for (Order order : selectedOrders) {
                 DeliveryLocation loc = new DeliveryLocation(order.getOrderId(), order.getDeliveryPoint().getY(), order.getDeliveryPoint().getX());
                 locationList.add(loc);
-                DeliveryOrder deliveryOrder = new DeliveryOrder(order.getOrderId(), loc, order.getTotalWeightKg(), order.getTotalVolumeM3());
+                Integer slaHours = order.getZone() != null ? order.getZone().getSlaHours() : null;
+                DeliveryOrder deliveryOrder = new DeliveryOrder(order.getOrderId(), loc, order.getTotalWeightKg(), order.getTotalVolumeM3(), slaHours);
                 orderList.add(deliveryOrder);
             }
 
-            // Calculate Distance Matrix
+            // Calculate Distance and Duration Matrix
             double[][] distanceMatrix = osrmRoutingService.getDistanceMatrix(locationList);
+            double[][] durationMatrix = osrmRoutingService.getDurationMatrix(locationList);
             for (int i = 0; i < locationList.size(); i++) {
                 Map<DeliveryLocation, Double> distMap = new HashMap<>();
+                Map<DeliveryLocation, Double> durMap = new HashMap<>();
                 for (int j = 0; j < locationList.size(); j++) {
                     if (i != j) {
                         distMap.put(locationList.get(j), distanceMatrix[i][j]);
+                        durMap.put(locationList.get(j), durationMatrix[i][j]);
                     }
                 }
                 locationList.get(i).setDistanceMap(distMap);
+                locationList.get(i).setDurationMap(durMap);
             }
 
             List<DeliveryVehicle> vehicleList = new ArrayList<>();
@@ -154,6 +159,20 @@ public class LocalTripServiceImpl implements ILocalTripService {
                     trip.setDriver(driver);
                     trip.setVehicle(driver.getCurrentVehicle());
                     trip.setStatus(LocalTripStatus.PENDING_ACCEPTANCE);
+                    trip.setLocalTripCode(generateUniqueLocalTripCode());
+                    
+                    double totalDurationSeconds = 0.0;
+                    DeliveryLocation previousLocation = vrpVehicle.getStartLocation();
+                    for (DeliveryOrder vrpOrder : vrpVehicle.getOrders()) {
+                        totalDurationSeconds += previousLocation.getDurationTo(vrpOrder.getLocation());
+                        previousLocation = vrpOrder.getLocation();
+                    }
+                    if (!vrpVehicle.getOrders().isEmpty()) {
+                        totalDurationSeconds += previousLocation.getDurationTo(vrpVehicle.getStartLocation());
+                    }
+                    int estMinutes = (int) Math.ceil(totalDurationSeconds / 60.0);
+                    trip.setVrpEstimatedMinutes(estMinutes);
+
                     trip = localTripRepository.save(trip);
 
                     int stopOrder = 1;
@@ -164,6 +183,7 @@ public class LocalTripServiceImpl implements ILocalTripService {
                         detail.setOrder(order);
                         detail.setStopOrder(stopOrder++);
                         detail.setStatus(LocalTripDetailStatus.PENDING);
+                        detail.setLocalTripDetailCode(generateUniqueLocalTripDetailCode());
                         localTripDetailRepository.save(detail);
 
                         order.setStatus(OrderStatus.IN_TRANSIT_LOCAL);
@@ -319,17 +339,24 @@ public class LocalTripServiceImpl implements ILocalTripService {
         for (Order order : selectedOrders) {
             DeliveryLocation loc = new DeliveryLocation(order.getOrderId(), order.getDeliveryPoint().getY(), order.getDeliveryPoint().getX());
             locationList.add(loc);
-            DeliveryOrder deliveryOrder = new DeliveryOrder(order.getOrderId(), loc, order.getTotalWeightKg(), order.getTotalVolumeM3());
+            Integer slaHours = order.getZone() != null ? order.getZone().getSlaHours() : null;
+            DeliveryOrder deliveryOrder = new DeliveryOrder(order.getOrderId(), loc, order.getTotalWeightKg(), order.getTotalVolumeM3(), slaHours);
             orderList.add(deliveryOrder);
         }
 
         double[][] distanceMatrix = osrmRoutingService.getDistanceMatrix(locationList);
+        double[][] durationMatrix = osrmRoutingService.getDurationMatrix(locationList);
         for (int i = 0; i < locationList.size(); i++) {
             Map<DeliveryLocation, Double> distMap = new HashMap<>();
+            Map<DeliveryLocation, Double> durMap = new HashMap<>();
             for (int j = 0; j < locationList.size(); j++) {
-                if (i != j) distMap.put(locationList.get(j), distanceMatrix[i][j]);
+                if (i != j) {
+                    distMap.put(locationList.get(j), distanceMatrix[i][j]);
+                    durMap.put(locationList.get(j), durationMatrix[i][j]);
+                }
             }
             locationList.get(i).setDistanceMap(distMap);
+            locationList.get(i).setDurationMap(durMap);
         }
 
         Driver driver = targetTrip.getDriver();
@@ -356,6 +383,7 @@ public class LocalTripServiceImpl implements ILocalTripService {
             detail.setOrder(order);
             detail.setStopOrder(stopOrder++);
             detail.setStatus(LocalTripDetailStatus.PENDING);
+            detail.setLocalTripDetailCode(generateUniqueLocalTripDetailCode());
             localTripDetailRepository.save(detail);
             
             order.setStatus(OrderStatus.IN_TRANSIT_LOCAL);
@@ -363,6 +391,19 @@ public class LocalTripServiceImpl implements ILocalTripService {
         }
         
         targetTrip.setStatus(LocalTripStatus.PENDING_ACCEPTANCE);
+        
+        double totalDurationSeconds = 0.0;
+        DeliveryLocation previousLocation = solvedVehicle.getStartLocation();
+        for (DeliveryOrder vrpOrder : solvedVehicle.getOrders()) {
+            totalDurationSeconds += previousLocation.getDurationTo(vrpOrder.getLocation());
+            previousLocation = vrpOrder.getLocation();
+        }
+        if (!solvedVehicle.getOrders().isEmpty()) {
+            totalDurationSeconds += previousLocation.getDurationTo(solvedVehicle.getStartLocation());
+        }
+        int estMinutes = (int) Math.ceil(totalDurationSeconds / 60.0);
+        targetTrip.setVrpEstimatedMinutes(estMinutes);
+
         localTripRepository.save(targetTrip);
     }
 
@@ -513,6 +554,7 @@ public class LocalTripServiceImpl implements ILocalTripService {
         Order order = detail.getOrder();
         order.setStatus(OrderStatus.DELIVERED);
         order.setProofUrl(proofUrl);
+        order.setActualDeliveryTime(java.time.LocalDateTime.now());
         orderRepository.save(order);
         
         checkTripCompletion(tripId);
@@ -540,6 +582,7 @@ public class LocalTripServiceImpl implements ILocalTripService {
         Order order = detail.getOrder();
         order.setStatus(OrderStatus.FAILED);
         order.setProofUrl(proofUrl);
+        order.setActualDeliveryTime(java.time.LocalDateTime.now());
         orderRepository.save(order);
         
         checkTripCompletion(tripId);
@@ -584,5 +627,31 @@ public class LocalTripServiceImpl implements ILocalTripService {
                 * Math.sin(lonDistance / 2) * Math.sin(lonDistance / 2);
         double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
         return R * c;
+    }
+
+    private String generateUniqueLocalTripCode() {
+        String code;
+        String chars = "0123456789";
+        do {
+            StringBuilder sb = new StringBuilder("LOT-");
+            for (int i = 0; i < 12; i++) {
+                sb.append(chars.charAt(java.util.concurrent.ThreadLocalRandom.current().nextInt(chars.length())));
+            }
+            code = sb.toString();
+        } while (localTripRepository.existsByLocalTripCode(code));
+        return code;
+    }
+
+    private String generateUniqueLocalTripDetailCode() {
+        String code;
+        String chars = "0123456789";
+        do {
+            StringBuilder sb = new StringBuilder("LTD-");
+            for (int i = 0; i < 12; i++) {
+                sb.append(chars.charAt(java.util.concurrent.ThreadLocalRandom.current().nextInt(chars.length())));
+            }
+            code = sb.toString();
+        } while (localTripDetailRepository.existsByLocalTripDetailCode(code));
+        return code;
     }
 }

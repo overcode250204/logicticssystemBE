@@ -18,6 +18,7 @@ public class DeliveryLocation {
     
     // Using a map for pre-calculated distances to other locations
     private Map<DeliveryLocation, Double> distanceMap;
+    private Map<DeliveryLocation, Double> durationMap;
     
     public DeliveryLocation(Long id, double lat, double lon) {
         this.id = id;
@@ -30,5 +31,12 @@ public class DeliveryLocation {
             return 0d;
         }
         return distanceMap != null ? distanceMap.getOrDefault(location, Double.MAX_VALUE) : Double.MAX_VALUE;
+    }
+
+    public double getDurationTo(DeliveryLocation location) {
+        if (this == location) {
+            return 0d;
+        }
+        return durationMap != null ? durationMap.getOrDefault(location, Double.MAX_VALUE) : Double.MAX_VALUE;
     }
 }

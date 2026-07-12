@@ -36,4 +36,7 @@ public class LocalTripDetail {
      @Enumerated(EnumType.STRING)
     @Column(name = "status", length = 20)
     private LocalTripDetailStatus status = LocalTripDetailStatus.PENDING;
+
+    @Column(name = "local_trip_detail_code", unique = true, length = 20)
+    private String localTripDetailCode;
 }

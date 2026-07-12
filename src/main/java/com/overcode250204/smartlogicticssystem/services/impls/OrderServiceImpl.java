@@ -5,6 +5,7 @@ import com.overcode250204.smartlogicticssystem.dtos.request.OrderCreateRequest;
 import com.overcode250204.smartlogicticssystem.dtos.request.OrderItemRequest;
 import com.overcode250204.smartlogicticssystem.dtos.response.OrderResponseDTO;
 import com.overcode250204.smartlogicticssystem.entities.*;
+import com.overcode250204.smartlogicticssystem.enums.DispatchType;
 import com.overcode250204.smartlogicticssystem.enums.OrderStatus;
 import com.overcode250204.smartlogicticssystem.events.OrderCreatedEvent;
 import com.overcode250204.smartlogicticssystem.exception.AppException;
@@ -25,6 +26,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
@@ -106,6 +109,7 @@ public class OrderServiceImpl extends BaseServiceImpl implements IOrderService {
         order.setTotalAmount(totalAmount);
         order.setTotalWeightKg(totalWeight);
         order.setTotalVolumeM3(totalVolumeM3);
+        calculateAndSetExpectedDeliveryTime(order);
         
         Order savedOrder = orderRepository.save(order);
         items = orderItemRepository.saveAll(items);
@@ -280,6 +284,7 @@ public class OrderServiceImpl extends BaseServiceImpl implements IOrderService {
         order.setTotalAmount(totalAmount);
         order.setTotalWeightKg(totalWeight);
         order.setTotalVolumeM3(totalVolumeM3);
+        calculateAndSetExpectedDeliveryTime(order);
 
         Order savedOrder = orderRepository.save(order);
         items = orderItemRepository.saveAll(items);
@@ -290,5 +295,54 @@ public class OrderServiceImpl extends BaseServiceImpl implements IOrderService {
         }
 
         return orderMapper.toResponse(savedOrder, items);
+    }
+
+    private void calculateAndSetExpectedDeliveryTime(Order order) {
+        LocalDateTime startCalculationTime = order.getCreatedAt() != null ? order.getCreatedAt() : LocalDateTime.now();
+        RouteConfig route = order.getRouteConfig();
+        
+        if (route != null) {
+            if (route.getDispatchType() == DispatchType.TIME) {
+                LocalTime cutoffTime = route.getCutoffTime();
+                if (cutoffTime != null) {
+                    if (startCalculationTime.toLocalTime().isAfter(cutoffTime)) {
+                        startCalculationTime = startCalculationTime.plusDays(1).with(cutoffTime);
+                    }
+                }
+            } else if (route.getDispatchType() == DispatchType.CAPACITY
+                    || route.getDispatchType() == DispatchType.HYBRID) {
+                int maxWaiting = route.getMaxWaitingDays() != null ? route.getMaxWaitingDays() : 3;
+                startCalculationTime = startCalculationTime.plusDays(maxWaiting);
+            }
+        }
+        
+        long tSource = 4; // default 4h
+        long tLinehaul = 0;
+        if (route != null && route.getSlaHours() != null) {
+            tLinehaul = route.getSlaHours();
+        }
+        
+        LocalDateTime arrivedTimeAtHub = startCalculationTime.plusHours(tSource + tLinehaul);
+        
+        if (route != null && route.getToWarehouse() != null) {
+            Warehouse desHub = route.getToWarehouse();
+            java.time.LocalTime startDeliveryTime = desHub.getStartDeliveryTime();
+            if (startDeliveryTime != null) {
+                if (arrivedTimeAtHub.toLocalTime().isBefore(startDeliveryTime)) {
+                    arrivedTimeAtHub = arrivedTimeAtHub.with(startDeliveryTime);
+                } else if (arrivedTimeAtHub.toLocalTime().isAfter(startDeliveryTime)) {
+                    arrivedTimeAtHub = arrivedTimeAtHub.plusDays(1).with(startDeliveryTime);
+                }
+            }
+        }
+        
+        long tDesHub = 4; // default 4h
+        long tLastMile = 0;
+        Zone zone = order.getZone();
+        if (zone != null && zone.getSlaHours() != null) {
+            tLastMile = zone.getSlaHours();
+        }
+        
+        order.setExpectedDeliveryTime(arrivedTimeAtHub.plusHours(tDesHub + tLastMile));
     }
 }

@@ -129,6 +129,7 @@ public class RoutingEngineServiceImpl implements IRoutingEngineService {
 
         // Create Shipment Batch (LinehaulTrip)
         LinehaulTrip trip = new LinehaulTrip();
+        trip.setLinehaulTripCode(generateUniqueLinehaulTripCode());
         trip.setRouteConfig(route);
         Vehicle vehicle = route.getDefaultVehicle();
         if (vehicle != null) {
@@ -203,6 +204,19 @@ public class RoutingEngineServiceImpl implements IRoutingEngineService {
     private String uploadBarcodeImage(BarcodeGeneratorUtil.GeneratedCode128Barcode generatedBarcode) {
         String key = "%s/%s.png".formatted("pallet-barcodes", generatedBarcode.barcode());
         return s3FileService.uploadBytes(generatedBarcode.pngBytes(), key, "image/png");
+    }
+
+    private String generateUniqueLinehaulTripCode() {
+        String code;
+        String chars = "0123456789";
+        do {
+            StringBuilder sb = new StringBuilder("LT-");
+            for (int i = 0; i < 12; i++) {
+                sb.append(chars.charAt(ThreadLocalRandom.current().nextInt(chars.length())));
+            }
+            code = sb.toString();
+        } while (linehaulTripRepository.existsByLinehaulTripCode(code));
+        return code;
     }
 
 }

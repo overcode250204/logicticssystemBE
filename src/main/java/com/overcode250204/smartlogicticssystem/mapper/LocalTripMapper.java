@@ -36,6 +36,8 @@ public class LocalTripMapper {
                 .status(localTrip.getStatus())
                 .createdAt(localTrip.getCreatedAt())
                 .details(details != null ? details.stream().map(this::toDetailResponseDTO).collect(Collectors.toList()) : null)
+                .localTripCode(localTrip.getLocalTripCode())
+                .vrpEstimatedMinutes(localTrip.getVrpEstimatedMinutes())
                 .build();
     }
 
@@ -51,6 +53,7 @@ public class LocalTripMapper {
                 .proofUrl(localTripDetail.getProofUrl())
                 .barcodeScanned(localTripDetail.getBarcodeScanned())
                 .status(localTripDetail.getStatus())
+                .localTripDetailCode(localTripDetail.getLocalTripDetailCode())
                 .build();
     }
 }

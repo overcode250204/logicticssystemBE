@@ -8,4 +8,5 @@ import java.util.Map;
 public class ZoneCreateRequest {
     private String name;
     private Map<String, Object> coverageArea;
+    private Integer slaHours;
 }

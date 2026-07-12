@@ -43,6 +43,7 @@ public class RouteConfigMapper {
                 .maxWaitingDays(entity.getMaxWaitingDays())
                 .provinceNames(provinceNames)
                 .isActive(entity.getIsActive())
+                .slaHours(entity.getSlaHours())
                 .build();
     }
 

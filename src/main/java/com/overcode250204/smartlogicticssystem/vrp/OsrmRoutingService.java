@@ -57,6 +57,73 @@ public class OsrmRoutingService {
         }
         return matrix;
     }
+
+    public double[][] getDurationMatrix(List<DeliveryLocation> locations) {
+        if (locations == null || locations.isEmpty()) {
+            return new double[0][0];
+        }
+
+        StringBuilder coordinates = new StringBuilder();
+        for (int i = 0; i < locations.size(); i++) {
+            DeliveryLocation loc = locations.get(i);
+            coordinates.append(loc.getLon()).append(",").append(loc.getLat());
+            if (i < locations.size() - 1) {
+                coordinates.append(";");
+            }
+        }
+
+        String url = OSRM_TABLE_API + coordinates.toString() + "?annotations=duration";
+        
+        try {
+            Map<String, Object> response = restTemplate.getForObject(url, Map.class);
+            if (response != null && "Ok".equals(response.get("code"))) {
+                List<List<Number>> durations = (List<List<Number>>) response.get("durations");
+                double[][] matrix = new double[locations.size()][locations.size()];
+                for (int i = 0; i < durations.size(); i++) {
+                    for (int j = 0; j < durations.get(i).size(); j++) {
+                        Number dur = durations.get(i).get(j);
+                        matrix[i][j] = dur != null ? dur.doubleValue() : Double.MAX_VALUE;
+                    }
+                }
+                return matrix;
+            }
+        } catch (Exception e) {
+            log.error("Failed to fetch duration matrix from OSRM: ", e);
+        }
+
+        // Fallback using Haversine distance divided by 30 km/h (8.33 m/s) average speed
+        log.warn("Falling back to Haversine duration matrix");
+        double[][] matrix = new double[locations.size()][locations.size()];
+        for (int i = 0; i < locations.size(); i++) {
+            for (int j = 0; j < locations.size(); j++) {
+                double dist = calculateHaversineDistance(locations.get(i), locations.get(j));
+                matrix[i][j] = dist / 8.33;
+            }
+        }
+        return matrix;
+    }
+
+    public double getTravelDurationSeconds(double lat1, double lon1, double lat2, double lon2) {
+        String url = "http://router.project-osrm.org/route/v1/driving/" + lon1 + "," + lat1 + ";" + lon2 + "," + lat2 + "?overview=false";
+        try {
+            Map<String, Object> response = restTemplate.getForObject(url, Map.class);
+            if (response != null && "Ok".equals(response.get("code"))) {
+                List<Map<String, Object>> routes = (List<Map<String, Object>>) response.get("routes");
+                if (routes != null && !routes.isEmpty()) {
+                    Number duration = (Number) routes.get(0).get("duration");
+                    return duration != null ? duration.doubleValue() : 0.0;
+                }
+            }
+        } catch (Exception e) {
+            log.error("Failed to fetch route duration from OSRM: ", e);
+        }
+        // Fallback using Haversine distance / 50 km/h (13.88 m/s) average speed
+        double distanceMeters = calculateHaversineDistance(
+                new DeliveryLocation(0L, lat1, lon1), 
+                new DeliveryLocation(0L, lat2, lon2)
+        );
+        return distanceMeters / 13.88;
+    }
     
     private double calculateHaversineDistance(DeliveryLocation loc1, DeliveryLocation loc2) {
         final int R = 6371000; // Radius of the earth in meters

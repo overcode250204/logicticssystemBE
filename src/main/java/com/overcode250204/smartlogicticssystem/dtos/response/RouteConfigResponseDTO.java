@@ -22,4 +22,5 @@ public class RouteConfigResponseDTO {
     private Integer maxWaitingDays;
     private List<String> provinceNames;
     private Boolean isActive;
+    private Integer slaHours;
 }

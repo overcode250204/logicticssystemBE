@@ -32,4 +32,5 @@ public class LinehaulTripResponseDTO {
 
     private LocalDateTime arrivalTime;
 
+    private String linehaulTripCode;
 }
