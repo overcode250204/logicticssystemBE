@@ -4,6 +4,7 @@ import com.overcode250204.smartlogicticssystem.base.BaseController;
 import com.overcode250204.smartlogicticssystem.base.BaseResponse;
 import com.overcode250204.smartlogicticssystem.dtos.request.ProductCreateRequest;
 import com.overcode250204.smartlogicticssystem.dtos.request.ProductUpdateRequest;
+import com.overcode250204.smartlogicticssystem.dtos.response.ProductPageResponseDTO;
 import com.overcode250204.smartlogicticssystem.dtos.response.ProductResponseDTO;
 import com.overcode250204.smartlogicticssystem.services.IProductService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -30,6 +31,23 @@ public class ProductController extends BaseController {
     @GetMapping
     public ResponseEntity<BaseResponse<List<ProductResponseDTO>>> getAllProducts() {
         return success(productService.getAllProducts(), "All products retrieved successfully");
+    }
+
+    @GetMapping("/page")
+    public ResponseEntity<BaseResponse<ProductPageResponseDTO>> getProductsPage(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) Long categoryId,
+            @RequestParam(required = false) Long supplierId,
+            @RequestParam(defaultValue = "productId") String sortBy,
+            @RequestParam(defaultValue = "DESC") String sortDirection,
+            @RequestHeader(name = "X-Role-Id") int roleId,
+            @RequestHeader(name = "X-User-Id") int userId) {
+        return success(
+                productService.getProductsPage(page, size, keyword, categoryId, supplierId, sortBy, sortDirection),
+                "Page products retrieved successfully"
+        );
     }
 
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
