@@ -50,9 +50,10 @@ public class OrderServiceImpl extends BaseServiceImpl implements IOrderService {
     @Override
     @Transactional
     public OrderResponseDTO createOrder(OrderCreateRequest request, int roleId, int userId) {
-        if (roleId != 4) {
+        if (roleId != 5) {
             throw new AppException(RoleErrorCode.ROLE_HAS_NO_PERMISSION);
         }
+
 
         // Auto-Routing: Find route config by delivery province
         RouteProvince routeProvince = routeProvinceRepository.findByProvinceName(request.getDeliveryProvince());
