@@ -11,6 +11,7 @@ import com.overcode250204.smartlogicticssystem.services.S3FileService;
 import com.overcode250204.smartlogicticssystem.utils.BarcodeGeneratorUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -33,6 +34,8 @@ public class RoutingEngineServiceImpl implements IRoutingEngineService {
     private final NotificationRepository notificationRepository;
     private final S3FileService s3FileService;
     private final VehicleRepository vehicleRepository;
+    private final UserRepository userRepository;
+    private final SimpMessagingTemplate messagingTemplate;
 
 
 
@@ -178,12 +181,38 @@ public class RoutingEngineServiceImpl implements IRoutingEngineService {
         pallet.setTotalWeightKg(totalWeight);
         pallet.setTotalVolumeM3(totalVolume);
         palletRepository.save(pallet);
-        // Send Notification to Hub Manager
-        Notification notification = new Notification();
-        notification.setTitle("Palletization Task: " + route.getRouteName());
-        notification.setMessage("Palletization triggered for " + eligibleOrders.size() + " orders. Linehaul Trip ID: " + trip.getLinehaulId());
-        notification.setType(NotificationType.PALLETIZATION_TASK);
-        notificationRepository.save(notification);
+        sendPalletizationTaskNotifications(route, trip, pallet, eligibleOrders.size());
+    }
+
+    private void sendPalletizationTaskNotifications(RouteConfig route, LinehaulTrip trip, Pallet pallet, int orderCount) {
+        List<User> staffUsers = userRepository.findByRole_RoleIdInAndIsActiveTrue(List.of(4));
+
+        for (User staff : staffUsers) {
+            Notification notification = new Notification();
+            notification.setTitle("Đóng gói pallet " + pallet.getPalletCode());
+            notification.setMessage("%d đơn hàng cần đóng gói cho tuyến %s. Chuyến linehaul: %s"
+                    .formatted(
+                            orderCount,
+                            route.getRouteName(),
+                            trip.getLinehaulTripCode() != null ? trip.getLinehaulTripCode() : trip.getLinehaulId()
+                    ));
+            notification.setType(NotificationType.PALLETIZATION_TASK);
+            notification.setRecipientId(staff.getUserId());
+            notification.setReferenceType("PALLET");
+            notification.setReferenceId(pallet.getPalletId());
+            notification.setIsRead(false);
+
+            Notification savedNotification = notificationRepository.save(notification);
+            String topic = "/topic/notifications/" + staff.getUserId();
+            messagingTemplate.convertAndSend(topic, savedNotification);
+        }
+
+        log.info(
+                "Sent palletization task notifications. palletId={}, palletCode={}, staffCount={}",
+                pallet.getPalletId(),
+                pallet.getPalletCode(),
+                staffUsers.size()
+        );
     }
 
     private String generateUniqueOrderCode() {

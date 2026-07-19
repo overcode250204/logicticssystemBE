@@ -15,6 +15,10 @@ public interface IPalletService {
 
     List<PalletResponseDTO> getAll(int roleId, int userId);
 
+    List<PalletResponseDTO> getStaffTasks(int roleId, int userId);
+
+    PalletResponseDTO getStaffTaskById(Long id, int roleId, int userId);
+
 
     void delete(Long id, int roleId, int userId);
 
