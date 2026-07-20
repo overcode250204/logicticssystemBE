@@ -18,8 +18,9 @@ public class LocalTripAdminController extends BaseController {
     private final ILocalTripService localTripService;
 
     @GetMapping
-    public ResponseEntity<BaseResponse<List<LocalTripResponseDTO>>> getAllLocalTrips() {
-        return success(localTripService.getAllLocalTrips(), "All local trips retrieved successfully");
+    public ResponseEntity<BaseResponse<List<LocalTripResponseDTO>>> getAllLocalTrips(
+            @RequestParam(required = false) com.overcode250204.smartlogicticssystem.enums.LocalTripStatus status) {
+        return success(localTripService.getAllLocalTrips(status), "All local trips retrieved successfully");
     }
 
     @GetMapping("/{id}")

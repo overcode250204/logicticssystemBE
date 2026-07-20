@@ -22,9 +22,10 @@ public class VehicleController extends BaseController {
 
     @GetMapping
     public ResponseEntity<BaseResponse<List<VehicleResponseDTO>>> getAllVehicles(
+            @RequestParam(required = false) Long currentVehicleId,
             @RequestHeader(name = "X-Role-Id") int roleId,
             @RequestHeader(name = "X-User-Id") int userId) {
-        return success(vehicleService.getAllVehicles(roleId, userId), "Vehicles retrieved successfully");
+        return success(vehicleService.getAllVehicles(currentVehicleId, roleId, userId), "Vehicles retrieved successfully");
     }
 
     @GetMapping("/{id}")

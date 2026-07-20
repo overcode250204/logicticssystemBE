@@ -38,9 +38,10 @@ public class LinehaulTripController extends BaseController {
     }
 
     @GetMapping
-    public ResponseEntity<BaseResponse<List<LinehaulTripResponseDTO>>> getAll(@RequestHeader(name = "X-Role-Id") int roleId,
+    public ResponseEntity<BaseResponse<List<LinehaulTripResponseDTO>>> getAll(@RequestParam(required = false) com.overcode250204.smartlogicticssystem.enums.LinehaulTripStatus status,
+                                                                              @RequestHeader(name = "X-Role-Id") int roleId,
                                                                               @RequestHeader(name = "X-User-Id") int userId) {
-        return success(linehaulTripService.getAll(roleId, userId), "All linehaul trips retrieved successfully");
+        return success(linehaulTripService.getAll(status, roleId, userId), "All linehaul trips retrieved successfully");
     }
 
     @PutMapping("/{id}")

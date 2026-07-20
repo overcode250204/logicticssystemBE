@@ -35,9 +35,11 @@ public class VehicleServiceImpl extends BaseServiceImpl implements IVehicleServi
     }
 
     @Override
-    public List<VehicleResponseDTO> getAllVehicles(int roleId, int userId) {
+    public List<VehicleResponseDTO> getAllVehicles(Long currentVehicleId, int roleId, int userId) {
         checkAdminRole(roleId);
         return vehicleRepository.findAll().stream()
+                .filter(v -> v.getStatus() == com.overcode250204.smartlogicticssystem.enums.VehicleStatus.ACTIVE 
+                        || (currentVehicleId != null && v.getVehicleId().equals(currentVehicleId)))
                 .map(vehicleMapper::toResponse)
                 .collect(Collectors.toList());
     }

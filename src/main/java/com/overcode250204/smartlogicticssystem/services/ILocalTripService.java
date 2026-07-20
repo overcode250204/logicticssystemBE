@@ -8,7 +8,7 @@ import java.util.List;
 
 public interface ILocalTripService {
     List<LocalTripResponseDTO> planLocalTrips();
-    List<LocalTripResponseDTO> getAllLocalTrips();
+    List<LocalTripResponseDTO> getAllLocalTrips(com.overcode250204.smartlogicticssystem.enums.LocalTripStatus status);
     List<LocalTripResponseDTO> getLocalTripsByDriverId(Long driverId);
     LocalTripResponseDTO getLocalTripById(Long id);
     void acceptTrip(Long driverId, Long tripId);

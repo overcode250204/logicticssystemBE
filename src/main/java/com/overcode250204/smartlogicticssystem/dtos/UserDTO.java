@@ -23,4 +23,10 @@ public class UserDTO {
     private Boolean isActive;
     private String password;
     private String token;
+    
+    // Driver profile fields
+    private String driverType;
+    private Long zoneId;
+    private Long currentWarehouseId;
+    private Long currentVehicleId;
 }

@@ -13,6 +13,8 @@ import java.util.List;
 @Repository
 public interface LinehaulTripRepository extends JpaRepository<LinehaulTrip, Long> {
     boolean existsByLinehaulTripCode(String linehaulTripCode);
+    java.util.Optional<LinehaulTrip> findByLinehaulTripCode(String linehaulTripCode);
+    List<LinehaulTrip> findByStatus(com.overcode250204.smartlogicticssystem.enums.LinehaulTripStatus status);
 
     @Query("SELECT t FROM LinehaulTrip t WHERE YEAR(t.departureTime) = :year AND MONTH(t.departureTime) = :month")
     List<LinehaulTrip> findByYearAndMonth(@Param("year") int year, @Param("month") int month);
@@ -32,4 +34,7 @@ public interface LinehaulTripRepository extends JpaRepository<LinehaulTrip, Long
                                           @Param("month") Integer month, 
                                           @Param("searchKeyword") String searchKeyword, 
                                           Pageable pageable);
+
+    @Query("SELECT t FROM LinehaulTrip t WHERE t.status = 'EN_ROUTE' ORDER BY t.departureTime ASC")
+    List<LinehaulTrip> findDelayedTrips(Pageable pageable);
 }

@@ -12,7 +12,7 @@ public interface ILinehaulTripService {
 
     LinehaulTripResponseDTO getById(Long id, int roleId, int userId);
 
-    List<LinehaulTripResponseDTO> getAll(int roleId, int userId);
+    List<LinehaulTripResponseDTO> getAll(com.overcode250204.smartlogicticssystem.enums.LinehaulTripStatus status, int roleId, int userId);
 
     LinehaulTripResponseDTO update(Long id, LinehaulTripUpdateRequest request, int roleId, int userId);
 

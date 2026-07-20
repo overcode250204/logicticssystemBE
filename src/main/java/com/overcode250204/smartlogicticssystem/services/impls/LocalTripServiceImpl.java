@@ -206,7 +206,10 @@ public class LocalTripServiceImpl implements ILocalTripService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<LocalTripResponseDTO> getAllLocalTrips() {
+    public List<LocalTripResponseDTO> getAllLocalTrips(com.overcode250204.smartlogicticssystem.enums.LocalTripStatus status) {
+        if (status != null) {
+            return localTripRepository.findByStatus(status).stream().map(localTripMapper::toResponseDTO).collect(Collectors.toList());
+        }
         return localTripRepository.findAll().stream().map(localTripMapper::toResponseDTO).collect(Collectors.toList());
     }
 

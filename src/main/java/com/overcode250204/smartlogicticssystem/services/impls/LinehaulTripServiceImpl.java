@@ -14,9 +14,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import com.overcode250204.smartlogicticssystem.services.LiveTrackingCache;
+import com.overcode250204.smartlogicticssystem.dtos.response.ActiveVehicleInfo;
+import com.overcode250204.smartlogicticssystem.vrp.OsrmRoutingService;
 
 
 @Service
@@ -29,6 +33,8 @@ public class LinehaulTripServiceImpl extends BaseServiceImpl implements ILinehau
     private final LinehaulTripMapper linehaulTripMapper;
     private final PalletRepository palletRepository;
     private final OrderRepository orderRepository;
+    private final LiveTrackingCache liveTrackingCache;
+    private final OsrmRoutingService osrmRoutingService;
 
     private void checkAdminRole(int roleId) {
         if (roleId != 1) {
@@ -69,8 +75,13 @@ public class LinehaulTripServiceImpl extends BaseServiceImpl implements ILinehau
     }
 
     @Override
-    public List<LinehaulTripResponseDTO> getAll(int roleId, int userId) {
+    public List<LinehaulTripResponseDTO> getAll(com.overcode250204.smartlogicticssystem.enums.LinehaulTripStatus status, int roleId, int userId) {
         checkAdminRole(roleId);
+        if (status != null) {
+            return linehaulTripRepository.findByStatus(status).stream()
+                    .map(linehaulTripMapper::toResponse)
+                    .toList();
+        }
         return linehaulTripRepository.findAll().stream()
                 .map(linehaulTripMapper::toResponse)
                 .toList();
@@ -427,6 +438,62 @@ public class LinehaulTripServiceImpl extends BaseServiceImpl implements ILinehau
         }
 
         LinehaulTrip savedTrip = linehaulTripRepository.save(linehaulTrip);
+
+        String shipperName = "Nguyễn Văn A";
+        if (linehaulTrip.getTripDrivers() != null) {
+            for (LinehaulTripDriver tripDriver : linehaulTrip.getTripDrivers()) {
+                if (tripDriver.getDriver() != null && DriverRole.MAIN.equals(tripDriver.getRole())) {
+                    shipperName = tripDriver.getDriver().getName();
+                    break;
+                }
+            }
+            if ("Nguyễn Văn A".equals(shipperName) && !linehaulTrip.getTripDrivers().isEmpty()) {
+                if (linehaulTrip.getTripDrivers().get(0).getDriver() != null) {
+                    shipperName = linehaulTrip.getTripDrivers().get(0).getDriver().getName();
+                }
+            }
+        }
+
+        LocalDateTime depTime = savedTrip.getDepartureTime();
+        if (depTime == null) {
+            depTime = LocalDateTime.now();
+        }
+        int slaHours = 24;
+        if (savedTrip.getRouteConfig() != null && savedTrip.getRouteConfig().getSlaHours() != null) {
+            slaHours = savedTrip.getRouteConfig().getSlaHours();
+        }
+        LocalDateTime deadlineTime = depTime.plusHours(slaHours);
+        String formattedDeadline = deadlineTime.format(DateTimeFormatter.ofPattern("HH:mm dd/MM/yyyy"));
+
+        double durationSeconds = 0.0;
+        String status = "green";
+        if (savedTrip.getRouteConfig() != null && savedTrip.getRouteConfig().getToWarehouse() != null) {
+            Warehouse toWarehouse = savedTrip.getRouteConfig().getToWarehouse();
+            if (toWarehouse.getLocation() != null && request.getLatitude() != null && request.getLongitude() != null) {
+                double destLat = toWarehouse.getLocation().getY();
+                double destLng = toWarehouse.getLocation().getX();
+                durationSeconds = osrmRoutingService.getTravelDurationSeconds(request.getLatitude(), request.getLongitude(), destLat, destLng);
+                LocalDateTime now = LocalDateTime.now();
+                LocalDateTime eta = now.plusSeconds((long) durationSeconds);
+                if (eta.isBefore(deadlineTime)) {
+                    status = "green";
+                } else {
+                    status = "yellow";
+                }
+            }
+        }
+
+        ActiveVehicleInfo activeVehicleInfo = ActiveVehicleInfo.builder()
+                .trip_code(savedTrip.getLinehaulTripCode())
+                .shipper_name(shipperName)
+                .deadline(formattedDeadline)
+                .lat(request.getLatitude())
+                .lng(request.getLongitude())
+                .status(status)
+                .last_ping_time(LocalDateTime.now().format(DateTimeFormatter.ofPattern("HH:mm dd/MM/yyyy")))
+                .build();
+        liveTrackingCache.put(savedTrip.getLinehaulTripCode(), activeVehicleInfo);
+
         return linehaulTripMapper.toResponse(savedTrip);
     }
 
@@ -483,6 +550,7 @@ public class LinehaulTripServiceImpl extends BaseServiceImpl implements ILinehau
         }
 
         LinehaulTrip savedTrip = linehaulTripRepository.save(linehaulTrip);
+        liveTrackingCache.remove(savedTrip.getLinehaulTripCode());
         return linehaulTripMapper.toResponse(savedTrip);
     }
 
