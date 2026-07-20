@@ -27,6 +27,7 @@ public class ZoneMapper {
                 .name(zone.getName())
                 .coverageArea(polygon)
                 .createAt(zone.getCreateAt())
+                .slaHours(zone.getSlaHours())
                 .build();
     }
 

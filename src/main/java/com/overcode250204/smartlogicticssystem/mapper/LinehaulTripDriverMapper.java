@@ -20,7 +20,6 @@ public class LinehaulTripDriverMapper {
                 .id(entity.getId())
                 .driver(driverMapper.toResponse(entity.getDriver()))
                 .role(entity.getRole())
-                .assignmentStatus(entity.getAssignmentStatus())
                 .assignedAt(entity.getAssignedAt())
                 .build();
     }

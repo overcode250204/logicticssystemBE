@@ -4,12 +4,14 @@ import com.overcode250204.smartlogicticssystem.entities.*;
 import com.overcode250204.smartlogicticssystem.enums.LinehaulTripStatus;
 import com.overcode250204.smartlogicticssystem.enums.NotificationType;
 import com.overcode250204.smartlogicticssystem.enums.OrderStatus;
+import com.overcode250204.smartlogicticssystem.enums.VehicleStatus;
 import com.overcode250204.smartlogicticssystem.repositories.*;
 import com.overcode250204.smartlogicticssystem.services.IRoutingEngineService;
 import com.overcode250204.smartlogicticssystem.services.S3FileService;
 import com.overcode250204.smartlogicticssystem.utils.BarcodeGeneratorUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,34 +33,18 @@ public class RoutingEngineServiceImpl implements IRoutingEngineService {
     private final PalletRepository palletRepository;
     private final NotificationRepository notificationRepository;
     private final S3FileService s3FileService;
+    private final VehicleRepository vehicleRepository;
+    private final UserRepository userRepository;
+    private final SimpMessagingTemplate messagingTemplate;
 
 
-    //TODO CHECK ACTIVE DRIVER
-    //TODO CHECK ROLE
-    //TODO CHECK GPS FOR LINEHAUL TRIP
-    /*
-    TODO DRIVER TRIGGER UPDATE STATUS OF LINEHAUL TRIP -> TO NOTIFICATION
-     TODO IF TYPE LINEHAUL IF ARRIVED -> STAFF MUST SCAN BARCODE TO OPEN PALLET
-     TODO AND SCAN ORDER TO CHECK -> CHANGE STATUS OF ORDER  TO ARRIVED_AT_HUB
-     TODO IF LOSS ORDER -> STAFF MUST REPORT
-     TODO WHEN SCAN ALL OF ORDER -> STAFF TRIGGER FINISH TO NOTIFICATION
-     TODO AND SYSTEM WILL CREATE LOCAL TRIP FOR DRIVER AND RUN VRP
-     TODO LAST MILE DRIVER MUST FOLLOW STEP: CHANGE STATUS ORDER TO   IN_TRANSIT_LOCAL
-     TODO WHEN CHANGE TO ARRIVED_AT_DELIVERY_POINT MUST CHECK GPS
-     TODO DRIVER MUST CAPTURE BILL SEND TO SYSTEM. 2 TYPE PAYMENT COD -> MANAGE MAUNUAL. CREDIT -> MUST TO TRACKING IN SYSTEM
-     TODO IF FAIL -> ORDER MUST RESTORE CNC
-     TODO WHEN LOCAL TRIP FINISH MUST CHANGE LOCAL TRIP STATUS TO COMPLETED
-     ====================
-     TODO IF DRIVER HAVE PROBLEM. MUST ALLOW STAF CAN CHANGE DRIVER FOR THIS TRIP MANUAL
-     ===================
-     TODO IF HAVE FAILED ORDER
-     TODO WHEN LINEHAUL TRIP COME THIS ORDER WILL RETURN IN THIS VEHICLE.
-     */
+
     @Override
     @Transactional
     public void checkRoutingCondition(Long routeId) {
         RouteConfig route = routeConfigRepository.findById(routeId).orElse(null);
         if (route == null) return;
+        if (route.getIsActive() != null && !route.getIsActive()) return;
 
         List<Order> newOrders = orderRepository.findByRouteConfigAndStatusOrderByCreatedAtAsc(route, OrderStatus.NEW);
         if (newOrders.isEmpty()) return;
@@ -140,14 +126,22 @@ public class RoutingEngineServiceImpl implements IRoutingEngineService {
         return false;
     }
 
-    private void triggerPalletization(RouteConfig route, List<Order> eligibleOrders) {
+    @Transactional
+    protected void triggerPalletization(RouteConfig route, List<Order> eligibleOrders) {
         log.info("Triggering palletization for Route: {}", route.getRouteName());
 
         // Create Shipment Batch (LinehaulTrip)
         LinehaulTrip trip = new LinehaulTrip();
+        trip.setLinehaulTripCode(generateUniqueLinehaulTripCode());
         trip.setRouteConfig(route);
-        trip.setVehicle(route.getDefaultVehicle());
+        Vehicle vehicle = route.getDefaultVehicle();
+        if (vehicle != null) {
+            trip.setVehicle(vehicle);
+            vehicle.setStatus(VehicleStatus.ON_TRIP);
+            vehicleRepository.save(vehicle);
+        }
         trip.setStatus(LinehaulTripStatus.PREPARING);
+        trip.setIsCreatedSystem(true);
         trip = linehaulTripRepository.save(trip);
 
         // Update Orders and create empty Pallet
@@ -163,18 +157,62 @@ public class RoutingEngineServiceImpl implements IRoutingEngineService {
         BarcodeGeneratorUtil.GeneratedCode128Barcode generatedBarcode = BarcodeGeneratorUtil.generateCode128Barcode(barcodeData);
         String barcodeImageUrl = uploadBarcodeImage(generatedBarcode);
         pallet.setBarcodeUrl(barcodeImageUrl);
+        pallet.setRouteConfig(route);
+        pallet.setIsCreatedSystem(true);
+
+        BigDecimal totalWeight = BigDecimal.ZERO;
+        BigDecimal totalVolume = BigDecimal.ZERO;
 
         for (Order order : eligibleOrders) {
             order.setStatus(OrderStatus.READY_TO_PICK);
+            PalletItem item = new PalletItem();
+            item.setOrder(order);
+            item.setPallet(pallet);
+            pallet.getPalletItems().add(item);
             orderRepository.save(order);
+
+            if (order.getTotalWeightKg() != null) {
+                totalWeight = totalWeight.add(order.getTotalWeightKg());
+            }
+            if (order.getTotalVolumeM3() != null) {
+                totalVolume = totalVolume.add(order.getTotalVolumeM3());
+            }
+        }
+        pallet.setTotalWeightKg(totalWeight);
+        pallet.setTotalVolumeM3(totalVolume);
+        palletRepository.save(pallet);
+        sendPalletizationTaskNotifications(route, trip, pallet, eligibleOrders.size());
+    }
+
+    private void sendPalletizationTaskNotifications(RouteConfig route, LinehaulTrip trip, Pallet pallet, int orderCount) {
+        List<User> staffUsers = userRepository.findByRole_RoleIdInAndIsActiveTrue(List.of(4));
+
+        for (User staff : staffUsers) {
+            Notification notification = new Notification();
+            notification.setTitle("Đóng gói pallet " + pallet.getPalletCode());
+            notification.setMessage("%d đơn hàng cần đóng gói cho tuyến %s. Chuyến linehaul: %s"
+                    .formatted(
+                            orderCount,
+                            route.getRouteName(),
+                            trip.getLinehaulTripCode() != null ? trip.getLinehaulTripCode() : trip.getLinehaulId()
+                    ));
+            notification.setType(NotificationType.PALLETIZATION_TASK);
+            notification.setRecipientId(staff.getUserId());
+            notification.setReferenceType("PALLET");
+            notification.setReferenceId(pallet.getPalletId());
+            notification.setIsRead(false);
+
+            Notification savedNotification = notificationRepository.save(notification);
+            String topic = "/topic/notifications/" + staff.getUserId();
+            messagingTemplate.convertAndSend(topic, savedNotification);
         }
 
-        // Send Notification to Hub Manager
-        Notification notification = new Notification();
-        notification.setTitle("Palletization Task: " + route.getRouteName());
-        notification.setMessage("Palletization triggered for " + eligibleOrders.size() + " orders. Linehaul Trip ID: " + trip.getLinehaulId());
-        notification.setType(NotificationType.PALLETIZATION_TASK);
-        notificationRepository.save(notification);
+        log.info(
+                "Sent palletization task notifications. palletId={}, palletCode={}, staffCount={}",
+                pallet.getPalletId(),
+                pallet.getPalletCode(),
+                staffUsers.size()
+        );
     }
 
     private String generateUniqueOrderCode() {
@@ -195,6 +233,19 @@ public class RoutingEngineServiceImpl implements IRoutingEngineService {
     private String uploadBarcodeImage(BarcodeGeneratorUtil.GeneratedCode128Barcode generatedBarcode) {
         String key = "%s/%s.png".formatted("pallet-barcodes", generatedBarcode.barcode());
         return s3FileService.uploadBytes(generatedBarcode.pngBytes(), key, "image/png");
+    }
+
+    private String generateUniqueLinehaulTripCode() {
+        String code;
+        String chars = "0123456789";
+        do {
+            StringBuilder sb = new StringBuilder("LT-");
+            for (int i = 0; i < 12; i++) {
+                sb.append(chars.charAt(ThreadLocalRandom.current().nextInt(chars.length())));
+            }
+            code = sb.toString();
+        } while (linehaulTripRepository.existsByLinehaulTripCode(code));
+        return code;
     }
 
 }

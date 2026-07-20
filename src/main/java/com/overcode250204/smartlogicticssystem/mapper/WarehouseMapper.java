@@ -35,6 +35,7 @@ public class WarehouseMapper {
                 .latitude(lat)
                 .longitude(lon)
                 .createdAt(warehouse.getCreatedAt())
+                .startDeliveryTime(warehouse.getStartDeliveryTime())
                 .build();
     }
 
@@ -48,6 +49,7 @@ public class WarehouseMapper {
         warehouse.setType(request.getType());
         warehouse.setAddress(request.getAddress());
         warehouse.setProvince(request.getProvince());
+        warehouse.setStartDeliveryTime(request.getStartDeliveryTime());
 
         if (request.getLatitude() != null && request.getLongitude() != null) {
             Point location = geometryFactory.createPoint(new Coordinate(request.getLongitude(), request.getLatitude()));
@@ -66,6 +68,7 @@ public class WarehouseMapper {
         warehouse.setType(request.getType());
         warehouse.setAddress(request.getAddress());
         warehouse.setProvince(request.getProvince());
+        warehouse.setStartDeliveryTime(request.getStartDeliveryTime());
 
         if (request.getLatitude() != null && request.getLongitude() != null) {
             Point location = geometryFactory.createPoint(new Coordinate(request.getLongitude(), request.getLatitude()));

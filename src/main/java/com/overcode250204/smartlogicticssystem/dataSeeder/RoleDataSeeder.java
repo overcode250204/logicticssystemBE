@@ -42,6 +42,11 @@ public class RoleDataSeeder implements DataSeeder {
                 "Nhân viên vận hành hệ thống"
         );
 
+        createRoleIfNotExists(
+                "CUSTOMER",
+                "Khách hàng sử dụng dịch vụ của hệ thống"
+        );
+
         log.info("Role seed data completed.");
     }
 

@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.wololo.jts2geojson.GeoJSONReader;
 import tools.jackson.databind.ObjectMapper;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -33,6 +34,8 @@ public class ZoneServiceImpl extends BaseServiceImpl implements IZoneService {
         Zone zone = Zone.builder()
                 .name(request.getName())
                 .polygon(polygon)
+                .createAt(LocalDateTime.now())
+                .slaHours(request.getSlaHours())
                 .build();
         zone = zoneRepository.save(zone);
 
@@ -44,6 +47,9 @@ public class ZoneServiceImpl extends BaseServiceImpl implements IZoneService {
         Zone zone = zoneRepository.findById(id).orElseThrow(() -> new RuntimeException("Zone not found"));
         if (request.getName() != null) {
             zone.setName(request.getName());
+        }
+        if (request.getSlaHours() != null) {
+            zone.setSlaHours(request.getSlaHours());
         }
         ObjectMapper mapper = new ObjectMapper();
         String geoJson = mapper.writeValueAsString(request.getCoverageArea());

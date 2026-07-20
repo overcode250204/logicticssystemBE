@@ -54,6 +54,12 @@ public class UserDataSeeder implements DataSeeder {
                 "STAFF"
         );
 
+        createUserIfNotExists(
+                "trandinhbao222@gmail.com",
+                "Khách Hàng",
+                null,
+                "CUSTOMER"
+        );
         log.info("User seed data completed.");
     }
 

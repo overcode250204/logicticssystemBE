@@ -25,15 +25,21 @@ public class LocalTrip {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "driver_id")
     private Driver driver;
-
+    
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "vehicle_id")
     private Vehicle vehicle;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", length = 20)
-    private LocalTripStatus status = LocalTripStatus.ASSIGNED;
+    private LocalTripStatus status = LocalTripStatus.PENDING_ACCEPTANCE;
 
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt = LocalDateTime.now();
+
+    @Column(name = "local_trip_code", unique = true, length = 20)
+    private String localTripCode;
+
+    @Column(name = "vrp_estimated_minutes")
+    private Integer vrpEstimatedMinutes;
 }

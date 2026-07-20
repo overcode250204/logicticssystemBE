@@ -14,13 +14,15 @@ public class LinehaulTripResponseDTO {
     private Long linehaulId;
 
 
-    private RouteConfigResponseDTO routeConfigResponseDTO;
+    private RouteConfigResponseDTO routeConfig;
 
 
-    private List<LinehaulTripDriverResponseDTO> linehaulTripDriverResponseDTO;
+    private List<LinehaulTripDriverResponseDTO> linehaulTripDriver;
+
+    private List<PalletResponseDTO> pallets;
 
 
-    private VehicleResponseDTO vehicleResponseDTO;
+    private VehicleResponseDTO vehicle;
 
 
     private LinehaulTripStatus status;
@@ -29,4 +31,6 @@ public class LinehaulTripResponseDTO {
     private LocalDateTime departureTime;
 
     private LocalDateTime arrivalTime;
+
+    private String linehaulTripCode;
 }

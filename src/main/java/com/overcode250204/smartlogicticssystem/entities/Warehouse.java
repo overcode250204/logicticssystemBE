@@ -7,6 +7,7 @@ import lombok.Setter;
 import org.locationtech.jts.geom.Point;
 
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 
 @Getter
 @Setter
@@ -37,4 +38,7 @@ public class Warehouse {
 
     @Column(name = "location", columnDefinition = "geometry(Point, 4326)")
     private Point location;
+
+    @Column(name = "start_delivery_time")
+    private LocalTime startDeliveryTime;
 }

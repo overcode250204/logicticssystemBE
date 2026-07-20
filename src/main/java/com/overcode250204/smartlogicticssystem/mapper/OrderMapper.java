@@ -17,6 +17,10 @@ public class OrderMapper {
     private final WarehouseMapper warehouseMapper;
     private final RouteConfigMapper routeConfigMapper;
 
+    public OrderResponseDTO toResponse(Order entity) {
+        return toResponse(entity, null);
+    }
+
     public OrderResponseDTO toResponse(Order entity, List<OrderItem> items) {
         if (entity == null) {
             return null;
@@ -53,6 +57,9 @@ public class OrderMapper {
                 .items(itemDTOs)
                 .totalWeightKg(entity.getTotalWeightKg())
                 .totalVolumeM3(entity.getTotalVolumeM3())
+                .proofUrl(entity.getProofUrl())
+                .expectedDeliveryTime(entity.getExpectedDeliveryTime())
+                .actualDeliveryTime(entity.getActualDeliveryTime())
                 .build();
     }
 

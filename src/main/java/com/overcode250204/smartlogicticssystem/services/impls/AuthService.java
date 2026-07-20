@@ -105,4 +105,9 @@ public class AuthService extends BaseServiceImpl implements IAuthService {
         }
     }
 
+    @Override
+    public UserDTO getUserById(Long userId) {
+        User u = findByIdOrThrow(userRepository, userId, UserErrorCode.USER_NOT_FOUND);
+        return userMapper.toDTO(u);
+    }
 }

@@ -24,4 +24,6 @@ public class VehicleUpdateRequest {
 
     @NotNull(message = "Status is required")
     private VehicleStatus status;
+
+    private Long currentWarehouseId;
 }

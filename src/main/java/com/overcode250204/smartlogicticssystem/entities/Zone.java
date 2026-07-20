@@ -24,6 +24,9 @@ public class Zone {
     @Column(columnDefinition = "geometry(Polygon, 4326)", name = "polygon")
     private Polygon polygon;
 
+    @Column(name = "sla_hours")
+    private Integer slaHours;
+
     @Column(name = "create_at")
     private LocalDateTime createAt = LocalDateTime.now();
 

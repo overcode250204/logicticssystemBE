@@ -11,6 +11,7 @@ public class LinehaulTripMapper {
     private final VehicleMapper vehicleMapper;
     private final RouteConfigMapper routeConfigMapper;
     private final LinehaulTripDriverMapper driverMapper;
+    private final PalletItemMapper palletItemMapper;
 
 
     public LinehaulTripResponseDTO toResponse(LinehaulTrip entity) {
@@ -21,15 +22,30 @@ public class LinehaulTripMapper {
 
         return LinehaulTripResponseDTO.builder()
                 .linehaulId(entity.getLinehaulId())
-                .routeConfigResponseDTO(routeConfigMapper.toResponse(entity.getRouteConfig()))
-                .linehaulTripDriverResponseDTO( entity.getTripDrivers() != null ?
+                .routeConfig(routeConfigMapper.toResponse(entity.getRouteConfig()))
+                .linehaulTripDriver( entity.getTripDrivers() != null ?
                         entity.getTripDrivers()
                                 .stream()
                                 .map(driverMapper::toResponse).toList() : null)
-                .vehicleResponseDTO(vehicleMapper.toResponse(entity.getVehicle()))
+                .pallets(entity.getPallets() != null ?
+                        entity.getPallets().stream()
+                                .map(p -> com.overcode250204.smartlogicticssystem.dtos.response.PalletResponseDTO.builder()
+                                        .palletId(p.getPalletId())
+                                        .palletCode(p.getPalletCode())
+                                        .barcodeUrl(p.getBarcodeUrl())
+                                        .totalWeightKg(p.getTotalWeightKg())
+                                        .totalVolumeM3(p.getTotalVolumeM3())
+                                        .status(p.getStatus())
+                                        .createdAt(p.getCreatedAt())
+                                        .isCreatedSystem(p.getIsCreatedSystem())
+                                        .palletItems(p.getPalletItems() != null ? p.getPalletItems().stream().map(palletItemMapper::toResponse).toList() : null)
+                                        .build())
+                                .toList() : null)
+                .vehicle(vehicleMapper.toResponse(entity.getVehicle()))
                 .status(entity.getStatus())
                 .departureTime(entity.getDepartureTime())
                 .arrivalTime(entity.getArrivalTime())
+                .linehaulTripCode(entity.getLinehaulTripCode())
                 .build();
     }
 

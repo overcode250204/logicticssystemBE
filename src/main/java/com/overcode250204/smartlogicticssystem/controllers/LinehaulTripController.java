@@ -4,6 +4,8 @@ import com.overcode250204.smartlogicticssystem.base.BaseController;
 import com.overcode250204.smartlogicticssystem.base.BaseResponse;
 import com.overcode250204.smartlogicticssystem.dtos.request.LinehaulTripCreateRequest;
 import com.overcode250204.smartlogicticssystem.dtos.request.LinehaulTripUpdateRequest;
+import com.overcode250204.smartlogicticssystem.dtos.request.LinehaulTripAddPalletRequest;
+import com.overcode250204.smartlogicticssystem.dtos.request.LinehaulTripGpsRequest;
 import com.overcode250204.smartlogicticssystem.dtos.response.LinehaulTripResponseDTO;
 import com.overcode250204.smartlogicticssystem.services.ILinehaulTripService;
 import jakarta.validation.Valid;
@@ -36,9 +38,10 @@ public class LinehaulTripController extends BaseController {
     }
 
     @GetMapping
-    public ResponseEntity<BaseResponse<List<LinehaulTripResponseDTO>>> getAll(@RequestHeader(name = "X-Role-Id") int roleId,
+    public ResponseEntity<BaseResponse<List<LinehaulTripResponseDTO>>> getAll(@RequestParam(required = false) com.overcode250204.smartlogicticssystem.enums.LinehaulTripStatus status,
+                                                                              @RequestHeader(name = "X-Role-Id") int roleId,
                                                                               @RequestHeader(name = "X-User-Id") int userId) {
-        return success(linehaulTripService.getAll(roleId, userId), "All linehaul trips retrieved successfully");
+        return success(linehaulTripService.getAll(status, roleId, userId), "All linehaul trips retrieved successfully");
     }
 
     @PutMapping("/{id}")
@@ -55,6 +58,45 @@ public class LinehaulTripController extends BaseController {
                                                      @RequestHeader(name = "X-User-Id") int userId) {
         linehaulTripService.delete(id, roleId, userId);
         return success(null, "Linehaul trip deleted successfully");
+    }
+
+    @PostMapping("/{id}/add-pallet")
+    public ResponseEntity<BaseResponse<LinehaulTripResponseDTO>> addPallet(@PathVariable Long id,
+                                                                           @Valid @RequestBody LinehaulTripAddPalletRequest request,
+                                                                           @RequestHeader(name = "X-Role-Id") int roleId,
+                                                                           @RequestHeader(name = "X-User-Id") int userId) {
+        return success(linehaulTripService.addPallet(id, request, roleId, userId), "Pallet added to trip successfully");
+    }
+
+    @PostMapping("/{id}/remove-pallet/{palletId}")
+    public ResponseEntity<BaseResponse<LinehaulTripResponseDTO>> removePallet(@PathVariable Long id,
+                                                                              @PathVariable Long palletId,
+                                                                              @RequestHeader(name = "X-Role-Id") int roleId,
+                                                                              @RequestHeader(name = "X-User-Id") int userId) {
+        return success(linehaulTripService.removePallet(id, palletId, roleId, userId), "Pallet removed from trip successfully");
+    }
+
+    @PostMapping("/{id}/dispatch")
+    public ResponseEntity<BaseResponse<LinehaulTripResponseDTO>> dispatchTrip(@PathVariable Long id,
+                                                                              @Valid @RequestBody LinehaulTripGpsRequest request,
+                                                                              @RequestHeader(name = "X-Role-Id") int roleId,
+                                                                              @RequestHeader(name = "X-User-Id") int userId) {
+        return success(linehaulTripService.dispatchTrip(id, request, roleId, userId), "Trip dispatched successfully");
+    }
+
+    @PostMapping("/{id}/finish")
+    public ResponseEntity<BaseResponse<LinehaulTripResponseDTO>> finishTrip(@PathVariable Long id,
+                                                                            @Valid @RequestBody LinehaulTripGpsRequest request,
+                                                                            @RequestHeader(name = "X-Role-Id") int roleId,
+                                                                            @RequestHeader(name = "X-User-Id") int userId) {
+        return success(linehaulTripService.finishTrip(id, request, roleId, userId), "Trip finished successfully");
+    }
+
+    @PostMapping("/{id}/can-start")
+    public ResponseEntity<BaseResponse<LinehaulTripResponseDTO>> updateStatusToCanStart(@PathVariable Long id,
+                                                                                       @RequestHeader(name = "X-Role-Id") int roleId,
+                                                                                       @RequestHeader(name = "X-User-Id") int userId) {
+        return success(linehaulTripService.updateStatusToCanStart(id, roleId, userId), "Trip status updated to CAN_START successfully");
     }
 }
 

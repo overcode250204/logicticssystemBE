@@ -34,4 +34,6 @@ public class RouteConfigCreateRequest {
     private Long defaultVehicleId;
 
     private List<String> provinceNames;
+
+    private Boolean isActive = true;
 }

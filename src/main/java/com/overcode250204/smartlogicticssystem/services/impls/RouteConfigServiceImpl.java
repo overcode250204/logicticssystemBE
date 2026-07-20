@@ -20,6 +20,7 @@ import com.overcode250204.smartlogicticssystem.repositories.WarehouseRepository;
 import com.overcode250204.smartlogicticssystem.repositories.VehicleRepository;
 import com.overcode250204.smartlogicticssystem.exception.VehicleErrorCode;
 import com.overcode250204.smartlogicticssystem.services.IRouteConfigService;
+import com.overcode250204.smartlogicticssystem.vrp.OsrmRoutingService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -36,6 +37,7 @@ public class RouteConfigServiceImpl extends BaseServiceImpl implements IRouteCon
     private final RouteConfigMapper routeConfigMapper;
     private final RouteProvinceRepository routeProvinceRepository;
     private final VehicleRepository vehicleRepository;
+    private final OsrmRoutingService osrmRoutingService;
 
     private void checkAdminRole(int roleId) {
         if (roleId != 1) {
@@ -68,6 +70,7 @@ public class RouteConfigServiceImpl extends BaseServiceImpl implements IRouteCon
         RouteConfig routeConfig = routeConfigMapper.toEntity(request);
         routeConfig.setFromWarehouse(fromWarehouse);
         routeConfig.setToWarehouse(toWarehouse);
+        calculateAndSetSlaHours(routeConfig, fromWarehouse, toWarehouse);
 
         if (request.getDefaultVehicleId() != null) {
             Vehicle vehicle = findByIdOrThrow(vehicleRepository, request.getDefaultVehicleId(), VehicleErrorCode.VEHICLE_NOT_FOUND);
@@ -102,6 +105,7 @@ public class RouteConfigServiceImpl extends BaseServiceImpl implements IRouteCon
         routeConfigMapper.updateEntity(request, routeConfig);
         routeConfig.setFromWarehouse(fromWarehouse);
         routeConfig.setToWarehouse(toWarehouse);
+        calculateAndSetSlaHours(routeConfig, fromWarehouse, toWarehouse);
 
         if (request.getDefaultVehicleId() != null) {
             Vehicle vehicle = findByIdOrThrow(vehicleRepository, request.getDefaultVehicleId(), VehicleErrorCode.VEHICLE_NOT_FOUND);
@@ -148,5 +152,19 @@ public class RouteConfigServiceImpl extends BaseServiceImpl implements IRouteCon
         checkAdminRole(roleId);
         RouteConfig routeConfig = findByIdOrThrow(routeConfigRepository, id, RouteConfigErrorCode.ROUTE_CONFIG_NOT_FOUND);
         routeConfigRepository.delete(routeConfig);
+    }
+
+    private void calculateAndSetSlaHours(RouteConfig routeConfig, Warehouse from, Warehouse to) {
+        if (from.getLocation() != null && to.getLocation() != null) {
+            double lat1 = from.getLocation().getY();
+            double lon1 = from.getLocation().getX();
+            double lat2 = to.getLocation().getY();
+            double lon2 = to.getLocation().getX();
+            double durationSeconds = osrmRoutingService.getTravelDurationSeconds(lat1, lon1, lat2, lon2);
+            int hours = (int) Math.ceil(durationSeconds / 3600.0);
+            routeConfig.setSlaHours(hours);
+        } else {
+            routeConfig.setSlaHours(0);
+        }
     }
 }

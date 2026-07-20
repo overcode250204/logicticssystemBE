@@ -8,4 +8,5 @@ public interface IAuthService {
     UserDTO login(String email, String password);
     UserDTO registerDriver(UserDTO userDTO);
     UserDTO loginWithFirebase(UserDTO userDTO);
+    UserDTO getUserById(Long userId);
 }
