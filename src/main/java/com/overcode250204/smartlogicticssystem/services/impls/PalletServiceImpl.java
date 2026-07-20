@@ -32,6 +32,8 @@ import java.util.concurrent.ThreadLocalRandom;
 @Service
 @RequiredArgsConstructor
 public class PalletServiceImpl extends BaseServiceImpl implements IPalletService {
+    private static final int ADMIN_ROLE_ID = 1;
+    private static final int STAFF_ROLE_ID = 4;
 
     private final S3FileService s3FileService;
     private final PalletRepository palletRepository;
@@ -42,7 +44,13 @@ public class PalletServiceImpl extends BaseServiceImpl implements IPalletService
     private final PalletItemRepository palletItemRepository;
 
     private void checkAdminRole(int roleId) {
-        if (roleId != 1) {
+        if (roleId != ADMIN_ROLE_ID) {
+            throw new AppException(RoleErrorCode.ROLE_HAS_NO_PERMISSION);
+        }
+    }
+
+    private void checkStaffOrAdminRole(int roleId) {
+        if (roleId != ADMIN_ROLE_ID && roleId != STAFF_ROLE_ID) {
             throw new AppException(RoleErrorCode.ROLE_HAS_NO_PERMISSION);
         }
     }
@@ -100,6 +108,23 @@ public class PalletServiceImpl extends BaseServiceImpl implements IPalletService
         return palletRepository.findAll().stream()
                 .map(palletMapper::toResponse)
                 .toList();
+    }
+
+    @Override
+    public List<PalletResponseDTO> getStaffTasks(int roleId, int userId) {
+        checkStaffOrAdminRole(roleId);
+        return palletRepository.findSystemTasksByStatusIn(List.of(PalletStatus.CREATING, PalletStatus.CAN_SEAL))
+                .stream()
+                .map(palletMapper::toResponse)
+                .toList();
+    }
+
+    @Override
+    public PalletResponseDTO getStaffTaskById(Long id, int roleId, int userId) {
+        checkStaffOrAdminRole(roleId);
+        Pallet pallet = palletRepository.findSystemTaskByIdWithItemsAndOrders(id)
+                .orElseThrow(() -> new AppException(PalletErrorCode.PALLET_NOT_FOUND));
+        return palletMapper.toResponse(pallet);
     }
 
     @Override
@@ -225,6 +250,7 @@ public class PalletServiceImpl extends BaseServiceImpl implements IPalletService
     @Override
     @Transactional
     public PalletItemResponseDTO scanPalletItem( Long palletId, String orderCode, int roleId, int userId) {
+        checkStaffOrAdminRole(roleId);
 
         //Pallet must exist
         Pallet pallet = palletRepository.findByIdWithItemsAndOrders(palletId)
@@ -304,7 +330,7 @@ public class PalletServiceImpl extends BaseServiceImpl implements IPalletService
     @Override
     @Transactional
     public PalletResponseDTO makeSealed(Long palletId, int roleId, int userId){
-        checkAdminRole(roleId);
+        checkStaffOrAdminRole(roleId);
 
         Pallet pallet = findByIdOrThrow(palletRepository, palletId, PalletErrorCode.PALLET_NOT_FOUND);
 
@@ -416,7 +442,7 @@ public class PalletServiceImpl extends BaseServiceImpl implements IPalletService
     @Override
     @Transactional
     public PalletResponseDTO updateStatusToCanSeal(Long palletId, int roleId, int userId) {
-        checkAdminRole(roleId);
+        checkStaffOrAdminRole(roleId);
         Pallet pallet = findByIdOrThrow(palletRepository, palletId, PalletErrorCode.PALLET_NOT_FOUND);
 
         if (pallet.getStatus() != PalletStatus.CREATING) {

@@ -20,6 +20,7 @@ public class PalletItemMapper {
         return PalletItemResponseDTO.builder()
                 .id(entity.getId())
                 .order(orderMapper.toResponse(entity.getOrder()))
+                .isScanned(entity.getIsScanned())
                 .scannedAt(entity.getScannedAt()).build();
     }
 }

@@ -13,5 +13,7 @@ public class PalletItemResponseDTO {
 
     private OrderResponseDTO order;
 
+    private Boolean isScanned;
+
     private LocalDateTime scannedAt;
 }

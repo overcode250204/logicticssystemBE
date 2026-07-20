@@ -39,6 +39,12 @@ public class Notification {
     @Column(name = "recipientid")
     private Long recipientId;
 
+    @Column(name = "reference_type")
+    private String referenceType;
+
+    @Column(name = "reference_id")
+    private Long referenceId;
+
     @Column(name = "isread")
     private Boolean isRead = false;
 

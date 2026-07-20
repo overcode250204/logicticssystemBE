@@ -99,7 +99,14 @@ public class LinehaulTripServiceImpl extends BaseServiceImpl implements ILinehau
         }
 
         //MAP VEHICLE
-        Vehicle vehicle = mapVehicle(request.getVehicleId());
+        Vehicle vehicle = linehaulTrip.getVehicle();
+        if(vehicle != null){
+            if(!Objects.equals(vehicle.getVehicleId(), request.getVehicleId())){
+                
+                vehicle = mapVehicle(request.getVehicleId());
+            }
+        }
+
         Vehicle vehicleToValidate = vehicle != null ? vehicle : (linehaulTrip.getRouteConfig() != null ? linehaulTrip.getRouteConfig().getDefaultVehicle() : null);
         if (vehicleToValidate != null) {
             java.math.BigDecimal totalWeight = linehaulTrip.getPallets().stream()
@@ -217,6 +224,7 @@ public class LinehaulTripServiceImpl extends BaseServiceImpl implements ILinehau
             if (!VehicleStatus.ACTIVE.equals(vehicle.getStatus())) {
                 throw new AppException(VehicleErrorCode.VEHICLE_NOT_ACTIVE);
             }
+            vehicle.setStatus(VehicleStatus.ON_TRIP);
             return vehicle;
         }else {
             return  null;

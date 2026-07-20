@@ -42,6 +42,21 @@ public class PalletController extends BaseController {
         return success(palletService.getAll(roleId, userId), "All pallets retrieved successfully");
     }
 
+    @GetMapping("/staff/tasks")
+    public ResponseEntity<BaseResponse<List<PalletResponseDTO>>> getStaffTasks(
+            @RequestHeader(name = "X-Role-Id") int roleId,
+            @RequestHeader(name = "X-User-Id") int userId) {
+        return success(palletService.getStaffTasks(roleId, userId), "Staff pallet tasks retrieved successfully");
+    }
+
+    @GetMapping("/staff/tasks/{id}")
+    public ResponseEntity<BaseResponse<PalletResponseDTO>> getStaffTaskById(
+            @PathVariable Long id,
+            @RequestHeader(name = "X-Role-Id") int roleId,
+            @RequestHeader(name = "X-User-Id") int userId) {
+        return success(palletService.getStaffTaskById(id, roleId, userId), "Staff pallet task retrieved successfully");
+    }
+
     @DeleteMapping("/{id}")
     public ResponseEntity<BaseResponse<Void>> delete(@PathVariable Long id,
                                                      @RequestHeader(name = "X-Role-Id") int roleId,

@@ -46,4 +46,5 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     """)
     Long countFinishedOrders(LocalDateTime from,
                              LocalDateTime to);
+    List<Order> findByCustomer_UserIdOrderByCreatedAtDesc(Long userId);
 }

@@ -74,6 +74,10 @@ public class Order {
     @JoinColumn(name = "zone_id")
     private Zone zone;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "customer_id")
+    private User customer;
+
     private LocalDateTime estimatedDeliveryTime;
 
     @Column(name = "expected_delivery_time")

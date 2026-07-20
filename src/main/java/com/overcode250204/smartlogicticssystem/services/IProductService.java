@@ -2,6 +2,7 @@ package com.overcode250204.smartlogicticssystem.services;
 
 import com.overcode250204.smartlogicticssystem.dtos.request.ProductCreateRequest;
 import com.overcode250204.smartlogicticssystem.dtos.request.ProductUpdateRequest;
+import com.overcode250204.smartlogicticssystem.dtos.response.ProductPageResponseDTO;
 import com.overcode250204.smartlogicticssystem.dtos.response.ProductResponseDTO;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -22,6 +23,16 @@ public interface IProductService {
     void delete(Long id, int roleId, int userId);
 
     List<ProductResponseDTO> getAllProducts();
+
+    ProductPageResponseDTO getProductsPage(
+            int page,
+            int size,
+            String keyword,
+            Long categoryId,
+            Long supplierId,
+            String sortBy,
+            String sortDirection
+    );
 
     ProductResponseDTO getByProductCode(String productCode);
 }
