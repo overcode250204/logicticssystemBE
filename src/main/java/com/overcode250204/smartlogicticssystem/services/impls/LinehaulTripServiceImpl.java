@@ -68,15 +68,36 @@ public class LinehaulTripServiceImpl extends BaseServiceImpl implements ILinehau
 
     @Override
     public LinehaulTripResponseDTO getById(Long id, int roleId, int userId) {
-        //CHECK ROLE
-        checkAdminRole(roleId);
         LinehaulTrip linehaulTrip = findByIdOrThrow(linehaulTripRepository, id, LinehaulTripErrorCode.LINEHAUL_TRIP_NOT_FOUND);
+        if (roleId != 1) {
+            boolean isAssignedDriver = linehaulTrip.getTripDrivers().stream()
+                    .anyMatch(td -> td.getDriver() != null && td.getDriver().getUser() != null 
+                            && td.getDriver().getUser().getUserId() != null 
+                            && td.getDriver().getUser().getUserId().intValue() == userId);
+            if (!isAssignedDriver) {
+                throw new AppException(RoleErrorCode.ROLE_HAS_NO_PERMISSION);
+            }
+        }
         return linehaulTripMapper.toResponse(linehaulTrip);
     }
 
     @Override
     public List<LinehaulTripResponseDTO> getAll(com.overcode250204.smartlogicticssystem.enums.LinehaulTripStatus status, int roleId, int userId) {
-        checkAdminRole(roleId);
+        if (roleId != 1) {
+            if (roleId == 3) {
+                List<LinehaulTrip> trips = linehaulTripRepository.findAll();
+                return trips.stream()
+                        .filter(t -> t.getTripDrivers().stream()
+                                .anyMatch(td -> td.getDriver() != null && td.getDriver().getUser() != null 
+                                        && td.getDriver().getUser().getUserId() != null 
+                                        && td.getDriver().getUser().getUserId().intValue() == userId))
+                        .filter(t -> status == null || t.getStatus().equals(status))
+                        .map(linehaulTripMapper::toResponse)
+                        .toList();
+            } else {
+                throw new AppException(RoleErrorCode.ROLE_HAS_NO_PERMISSION);
+            }
+        }
         if (status != null) {
             return linehaulTripRepository.findByStatus(status).stream()
                     .map(linehaulTripMapper::toResponse)
