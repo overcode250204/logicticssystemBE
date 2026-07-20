@@ -15,4 +15,5 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     java.util.Optional<Order> findByOrderCode(String orderCode);
     List<Order> findByZone_ZoneIdAndStatusIn(Long zoneId, List<OrderStatus> statuses);
     List<Order> findByStatus(OrderStatus status, org.springframework.data.domain.Sort sort);
+    List<Order> findByCustomer_UserIdOrderByCreatedAtDesc(Long userId);
 }

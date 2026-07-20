@@ -10,8 +10,10 @@ import com.overcode250204.smartlogicticssystem.services.impls.AuthService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -42,6 +44,11 @@ public class AuthController extends BaseController {
         return ResponseEntity.ok(BaseResponse.success(response, "Login Successful"));
     }
 
-
+    @GetMapping("/me")
+    public ResponseEntity<BaseResponse<UserDTO>> getMe(
+            @RequestHeader(name = "X-User-Id") long userId) {
+        UserDTO response = authService.getUserById(userId);
+        return success(response, "User profile retrieved successfully");
+    }
 
 }

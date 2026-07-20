@@ -4,6 +4,7 @@ import com.overcode250204.smartlogicticssystem.base.BaseServiceImpl;
 import com.overcode250204.smartlogicticssystem.dtos.request.OrderCreateRequest;
 import com.overcode250204.smartlogicticssystem.dtos.request.OrderItemRequest;
 import com.overcode250204.smartlogicticssystem.dtos.response.OrderResponseDTO;
+import com.overcode250204.smartlogicticssystem.dtos.response.OrderTrackingResponseDTO;
 import com.overcode250204.smartlogicticssystem.entities.*;
 import com.overcode250204.smartlogicticssystem.enums.DispatchType;
 import com.overcode250204.smartlogicticssystem.enums.OrderStatus;
@@ -26,10 +27,12 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.text.Normalizer;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 
@@ -46,6 +49,8 @@ public class OrderServiceImpl extends BaseServiceImpl implements IOrderService {
     private final S3FileService s3FileService;
     private final GeometryFactory geometryFactory = new GeometryFactory();
     private final ZoneRepository zoneRepository;
+    private final UserRepository userRepository;
+    private final OrderTrackingRepository orderTrackingRepository;
 
     @Override
     @Transactional
@@ -54,18 +59,21 @@ public class OrderServiceImpl extends BaseServiceImpl implements IOrderService {
             throw new AppException(RoleErrorCode.ROLE_HAS_NO_PERMISSION);
         }
 
+        User customer = userRepository.findById((long) userId)
+                .orElseThrow(() -> new AppException(RoleErrorCode.ROLE_ID_NOT_FOUND));
 
         // Auto-Routing: Find route config by delivery province
-        RouteProvince routeProvince = routeProvinceRepository.findByProvinceName(request.getDeliveryProvince());
+        RouteProvince routeProvince = findRouteProvinceByDeliveryProvince(request.getDeliveryProvince());
         if (routeProvince == null) {
             throw new AppException(OrderErrorCode.DELIVERY_PROVINCE_UNSUPPORTED);
         }
 
-        //Get zone to GROUP
+        // Zone is optional because some supported provinces may not have polygon coverage yet.
         Zone zone = zoneRepository.findAreaContainingPoint(request.getLongitude(), request.getLatitude())
-                .orElseThrow(() -> new AppException(OrderErrorCode.DELIVERY_PROVINCE_UNSUPPORTED));
+                .orElse(null);
 
         Order order = new Order();
+        order.setCustomer(customer);
         order.setCustomerName(request.getCustomerName());
         order.setPhone(request.getPhone());
         order.setDeliveryAddress(request.getDeliveryAddress());
@@ -168,6 +176,40 @@ public class OrderServiceImpl extends BaseServiceImpl implements IOrderService {
         return s3FileService.uploadBytes(generatedBarcode.pngBytes(), key, "image/png");
     }
 
+    private RouteProvince findRouteProvinceByDeliveryProvince(String deliveryProvince) {
+        RouteProvince exactMatch = routeProvinceRepository.findByProvinceName(deliveryProvince);
+        if (exactMatch != null) {
+            return exactMatch;
+        }
+
+        String normalizedRequest = normalizeProvinceName(deliveryProvince);
+        if (normalizedRequest.isBlank()) {
+            return null;
+        }
+
+        return routeProvinceRepository.findAll().stream()
+                .filter(routeProvince -> normalizeProvinceName(routeProvince.getProvinceName()).equals(normalizedRequest))
+                .findFirst()
+                .orElse(null);
+    }
+
+    private String normalizeProvinceName(String provinceName) {
+        if (provinceName == null) {
+            return "";
+        }
+        String normalized = Normalizer.normalize(provinceName, Normalizer.Form.NFD)
+                .replaceAll("\\p{M}", "")
+                .replace('đ', 'd')
+                .replace('Đ', 'D')
+                .toLowerCase(Locale.ROOT);
+        normalized = normalized.replaceAll("\\b(thanh pho|tinh|tp|city|province)\\b", "");
+        normalized = normalized.replaceAll("[^a-z0-9]", "");
+        if (normalized.equals("hcm") || normalized.equals("tphcm") || normalized.equals("saigon")) {
+            return "hochiminh";
+        }
+        return normalized;
+    }
+
     @Override
     public List<OrderResponseDTO> getAllOrders(int roleId, int userId) {
         if (roleId != 1) {
@@ -236,7 +278,7 @@ public class OrderServiceImpl extends BaseServiceImpl implements IOrderService {
 
         // Auto-Routing: Find route config by delivery province if it changed
         if (!order.getDeliveryProvince().equals(request.getDeliveryProvince())) {
-            RouteProvince routeProvince = routeProvinceRepository.findByProvinceName(request.getDeliveryProvince());
+            RouteProvince routeProvince = findRouteProvinceByDeliveryProvince(request.getDeliveryProvince());
             if (routeProvince == null) {
                 throw new AppException(OrderErrorCode.DELIVERY_PROVINCE_UNSUPPORTED);
             }
@@ -250,7 +292,7 @@ public class OrderServiceImpl extends BaseServiceImpl implements IOrderService {
                 !request.getLongitude().equals(order.getDeliveryPoint().getX());
         if (locationChanged) {
             Zone zone = zoneRepository.findAreaContainingPoint(request.getLongitude(), request.getLatitude())
-                    .orElseThrow(() -> new AppException(OrderErrorCode.DELIVERY_PROVINCE_UNSUPPORTED));
+                    .orElse(null);
             order.setZone(zone);
             Point deliveryPoint = geometryFactory.createPoint(new Coordinate(request.getLongitude(), request.getLatitude()));
             deliveryPoint.setSRID(4326);
@@ -345,5 +387,54 @@ public class OrderServiceImpl extends BaseServiceImpl implements IOrderService {
         }
         
         order.setExpectedDeliveryTime(arrivedTimeAtHub.plusHours(tDesHub + tLastMile));
+    }
+
+    @Override
+    public List<OrderResponseDTO> getMyOrders(int roleId, int userId) {
+        if (roleId != 5) {
+            throw new AppException(RoleErrorCode.ROLE_HAS_NO_PERMISSION);
+        }
+        List<Order> orders = orderRepository.findByCustomer_UserIdOrderByCreatedAtDesc((long) userId);
+        List<OrderItem> allItems = orderItemRepository.findByOrderIn(orders);
+        java.util.Map<Long, List<OrderItem>> itemsByOrderId = allItems.stream()
+                .collect(Collectors.groupingBy(item -> item.getOrder().getOrderId()));
+        return orders.stream()
+                .map(order -> orderMapper.toResponse(order, itemsByOrderId.getOrDefault(order.getOrderId(), new ArrayList<>())))
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public OrderResponseDTO getMyOrderById(Long id, int roleId, int userId) {
+        if (roleId != 5) {
+            throw new AppException(RoleErrorCode.ROLE_HAS_NO_PERMISSION);
+        }
+        Order order = findByIdOrThrow(orderRepository, id, OrderErrorCode.ORDER_NOT_FOUND);
+        if (order.getCustomer() == null || !order.getCustomer().getUserId().equals((long) userId)) {
+            throw new AppException(RoleErrorCode.ROLE_HAS_NO_PERMISSION);
+        }
+        List<OrderItem> items = orderItemRepository.findByOrderIn(List.of(order));
+        return orderMapper.toResponse(order, items);
+    }
+
+    @Override
+    public List<OrderTrackingResponseDTO> getMyOrderTracking(Long orderId, int roleId, int userId) {
+        if (roleId != 5) {
+            throw new AppException(RoleErrorCode.ROLE_HAS_NO_PERMISSION);
+        }
+        Order order = findByIdOrThrow(orderRepository, orderId, OrderErrorCode.ORDER_NOT_FOUND);
+        if (order.getCustomer() == null || !order.getCustomer().getUserId().equals((long) userId)) {
+            throw new AppException(RoleErrorCode.ROLE_HAS_NO_PERMISSION);
+        }
+        List<OrderTracking> trackings = orderTrackingRepository.findByOrder_OrderIdOrderByRecordedAtAsc(orderId);
+        return trackings.stream()
+                .map(t -> OrderTrackingResponseDTO.builder()
+                        .trackingId(t.getTrackingId())
+                        .orderId(t.getOrder().getOrderId())
+                        .latitude(t.getLatitude())
+                        .longitude(t.getLongitude())
+                        .recordedAt(t.getRecordedAt())
+                        .note(t.getNote())
+                        .build())
+                .collect(Collectors.toList());
     }
 }

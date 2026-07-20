@@ -7,9 +7,11 @@ import org.springframework.core.NestedExceptionUtils;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.server.ResponseStatusException;
 import software.amazon.awssdk.services.s3.model.S3Exception;
 import org.postgresql.util.PSQLException;
 import org.postgresql.util.ServerErrorMessage;
@@ -22,6 +24,12 @@ public class GlobalExceptionHandler {
         BaseErrorCode errorCode = e.getErrorCode();
         return ResponseEntity.status(errorCode.getHttpStatus())
                 .body(BaseResponse.error(errorCode.getCode(), errorCode.getMessage()));
+    }
+
+    @ExceptionHandler(ResponseStatusException.class)
+    public ResponseEntity<BaseResponse<Void>> handleResponseStatusException(ResponseStatusException e) {
+        return ResponseEntity.status(e.getStatusCode())
+                .body(BaseResponse.error(e.getStatusCode().value(), e.getReason()));
     }
 
     @ExceptionHandler(Exception.class)
@@ -88,14 +96,33 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<BaseResponse<Void>> handleValidationException(
             MethodArgumentNotValidException e) {
-        String message = e.getBindingResult().getFieldError().getDefaultMessage();
+        String message = e.getBindingResult().getFieldError() != null
+                ? e.getBindingResult().getFieldError().getDefaultMessage()
+                : "Request data is invalid";
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(BaseResponse.error(HttpStatus.BAD_REQUEST.value(), message));
     }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<BaseResponse<Void>> handleHttpMessageNotReadable(
+            HttpMessageNotReadableException e) {
+        String message = "Request body is invalid or has unsupported values";
+        String detail = e.getMostSpecificCause() != null
+                ? e.getMostSpecificCause().getMessage()
+                : e.getMessage();
+        if (detail != null && detail.contains("PaymentType")) {
+            message = "Payment type is invalid. Accepted values are COD and CREDIT";
+        }
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(BaseResponse.error(HttpStatus.BAD_REQUEST.value(), message));
+    }
+
     @ExceptionHandler(S3Exception.class)
     public ResponseEntity<BaseResponse<Void>> handleS3Exception(
-            MethodArgumentNotValidException e) {
-        String message = e.getBindingResult().getFieldError().getDefaultMessage();
+            S3Exception e) {
+        String message = e.awsErrorDetails() != null && e.awsErrorDetails().errorMessage() != null
+                ? e.awsErrorDetails().errorMessage()
+                : "S3 upload failed";
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(BaseResponse.error(HttpStatus.BAD_REQUEST.value(), message));
     }private String buildUniqueMessage(String column, String constraint) {
