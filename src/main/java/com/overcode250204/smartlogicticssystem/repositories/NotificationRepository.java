@@ -1,6 +1,7 @@
 package com.overcode250204.smartlogicticssystem.repositories;
 
 import com.overcode250204.smartlogicticssystem.entities.Notification;
+import com.overcode250204.smartlogicticssystem.enums.NotificationType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -11,4 +12,11 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
     List<Notification> findByRecipientIdOrderByCreatedAtDesc(Long recipientId);
 
     long countByRecipientIdAndIsReadFalse(Long recipientId);
+
+    boolean existsByRecipientIdAndReferenceTypeAndReferenceIdAndType(
+            Long recipientId,
+            String referenceType,
+            Long referenceId,
+            NotificationType type
+    );
 }

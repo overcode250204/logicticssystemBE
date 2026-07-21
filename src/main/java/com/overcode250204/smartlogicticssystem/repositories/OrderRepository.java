@@ -21,7 +21,7 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     @Query("""
     SELECT COUNT(o)
     FROM Order o
-    WHERE o.createdAt BETWEEN :from AND :to
+    WHERE o.createdAt >= :from AND o.createdAt < :to
     """)
     Long countOrders(LocalDateTime from,
                      LocalDateTime to);
@@ -29,7 +29,7 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     @Query("""
     SELECT COUNT(o)
     FROM Order o
-    WHERE o.actualDeliveryTime BETWEEN :from AND :to
+    WHERE o.actualDeliveryTime >= :from AND o.actualDeliveryTime < :to
     AND o.status = OrderStatus.DELIVERED
     """)
     Long countDeliveredOrders(LocalDateTime from,
@@ -38,7 +38,7 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     @Query("""
     SELECT COUNT(o)
     FROM Order o
-    WHERE o.actualDeliveryTime BETWEEN :from AND :to
+    WHERE o.actualDeliveryTime >= :from AND o.actualDeliveryTime < :to
     AND o.status IN (
     OrderStatus.DELIVERED,
     OrderStatus.FAILED

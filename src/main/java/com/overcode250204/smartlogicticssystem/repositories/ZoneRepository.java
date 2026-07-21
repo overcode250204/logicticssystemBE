@@ -8,6 +8,8 @@ import org.springframework.data.repository.query.Param;
 import java.util.Optional;
 
 public interface ZoneRepository extends JpaRepository<Zone, Long> {
+    Optional<Zone> findByNameIgnoreCase(String name);
+
     @Query(value = """
         SELECT *
         FROM zones z

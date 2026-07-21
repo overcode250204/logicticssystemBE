@@ -10,16 +10,17 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class LogisticsDashboardResponse {
-    private Long totalOrders;
+    private long totalOrders;
 
-    private Double totalOrderRateChange;
+    private double totalOrdersGrowth;
 
-    private Double successRate;
+    private double successRate;
 
-    private Long activeFleet;
+    private double successRateGrowth;
 
-    private Long criticalAlerts;
+    private long activeFleetLinehaul;
 
-    private Double successRateChange;
+    private long activeFleetLocal;
 
+    private long criticalAlerts;
 }

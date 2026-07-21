@@ -9,8 +9,10 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.server.ResponseStatusException;
 import software.amazon.awssdk.services.s3.model.S3Exception;
 import org.postgresql.util.PSQLException;
@@ -34,9 +36,28 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<BaseResponse<Void>> handleGeneralException(Exception e) {
+        log.error("Unhandled application exception", e);
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(BaseResponse.error(HttpStatus.INTERNAL_SERVER_ERROR.value(),
                         "An unexpected error occurred: " + e.getMessage()));
+    }
+
+    @ExceptionHandler({
+            MissingServletRequestParameterException.class,
+            MethodArgumentTypeMismatchException.class
+    })
+    public ResponseEntity<BaseResponse<Void>> handleInvalidRequestParameter(Exception e) {
+        String message;
+        if (e instanceof MethodArgumentTypeMismatchException mismatch) {
+            message = "Invalid value for request parameter '" + mismatch.getName() + "'";
+        } else if (e instanceof MissingServletRequestParameterException missing) {
+            message = "Missing required request parameter '" + missing.getParameterName() + "'";
+        } else {
+            message = "Request parameters are invalid";
+        }
+
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(BaseResponse.error(HttpStatus.BAD_REQUEST.value(), message));
     }
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<BaseResponse<Void>> handleDataIntegrityViolation(

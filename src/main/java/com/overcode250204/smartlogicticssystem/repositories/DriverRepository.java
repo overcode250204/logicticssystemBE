@@ -8,6 +8,8 @@ import java.util.List;
 import java.util.Optional;
 
 public interface DriverRepository extends JpaRepository<Driver, Long> {
+    Optional<Driver> findByPhone(String phone);
+
     List<Driver> findByZone_ZoneIdAndStatus(Long zoneId, DriverStatus status);
 
 

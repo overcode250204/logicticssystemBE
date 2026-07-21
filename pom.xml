@@ -209,6 +209,10 @@
                         </configuration>
                     </execution>
                 </executions>
+                <configuration>
+                    <source>5</source>
+                    <target>5</target>
+                </configuration>
             </plugin>
         </plugins>
     </build>

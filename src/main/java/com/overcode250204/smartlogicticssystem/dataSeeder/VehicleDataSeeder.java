@@ -30,9 +30,9 @@ public class VehicleDataSeeder implements DataSeeder {
     @Override
     @Transactional
     public void seed() {
-        Warehouse defaultWarehouse = warehouseRepository.findAll().stream()
-                .findFirst()
-                .orElse(null);
+        Warehouse defaultWarehouse = warehouseRepository
+                .findByNameIgnoreCase(WarehouseZoneDataSeeder.HCM_CDC)
+                .orElseThrow(() -> new IllegalStateException("Seed warehouse not found"));
 
         List<VehicleSeed> vehicles = List.of(
                 new VehicleSeed("51A-10001", VehicleType.BIG_TRUCK, "15000", "60", "9.600", "2.400", "2.600", VehicleStatus.ACTIVE),

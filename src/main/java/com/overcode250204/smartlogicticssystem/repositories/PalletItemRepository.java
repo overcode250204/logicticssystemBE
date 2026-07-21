@@ -10,4 +10,6 @@ import java.util.List;
 @Repository
 public interface PalletItemRepository extends JpaRepository<PalletItem, Long> {
     List<PalletItem> findAllByPallet(Pallet pallet);
+
+    boolean existsByOrder_OrderId(Long orderId);
 }

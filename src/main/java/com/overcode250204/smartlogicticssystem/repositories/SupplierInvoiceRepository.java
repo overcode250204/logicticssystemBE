@@ -16,6 +16,8 @@ import java.util.Optional;
 public interface SupplierInvoiceRepository extends JpaRepository<SupplierInvoice, Long> {
     boolean existsByInvoiceCode(String invoiceCode);
 
+    Optional<SupplierInvoice> findByInvoiceCode(String invoiceCode);
+
     boolean existsByInvoiceCodeAndIdNot(String invoiceCode, Long id);
 
     Optional<SupplierInvoice> findByIdAndIsActiveTrue(Long id);

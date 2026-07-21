@@ -8,10 +8,12 @@ import java.time.LocalDateTime;
 
 public interface OrderExceptionRepository extends JpaRepository<OrderException, Long> {
 
+    boolean existsByOrder_OrderIdAndExceptionReason_ReasonId(Long orderId, Long reasonId);
+
     @Query("""
     SELECT COUNT(e)
     FROM OrderException e
-    WHERE e.createdAt BETWEEN :from AND :to
+    WHERE e.createdAt >= :from AND e.createdAt < :to
     """)
     Long countCriticalAlerts(LocalDateTime from,
                              LocalDateTime to);

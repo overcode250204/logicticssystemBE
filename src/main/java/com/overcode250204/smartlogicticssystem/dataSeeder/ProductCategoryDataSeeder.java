@@ -16,7 +16,7 @@ public class ProductCategoryDataSeeder implements DataSeeder {
 
     @Override
     public int getOrder() {
-        return 6;
+        return 5;
     }
 
     @Override

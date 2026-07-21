@@ -9,4 +9,6 @@ import java.util.List;
 @Repository
 public interface OrderTrackingRepository extends JpaRepository<OrderTracking, Long> {
     List<OrderTracking> findByOrder_OrderIdOrderByRecordedAtAsc(Long orderId);
+
+    boolean existsByOrder_OrderIdAndNote(Long orderId, String note);
 }

@@ -29,7 +29,7 @@ public class ProductDataSeeder implements DataSeeder {
 
     @Override
     public int getOrder() {
-        return 5;
+        return 6;
     }
 
     @Override
