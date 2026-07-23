@@ -28,4 +28,12 @@ aws:
 firebase:
   config-path: "firebase-service-account.json"
 
+app:
+  ai:
+    enabled: ${AI_ENABLED:false}
+    api-key: ${AI_API_KEY:}
+    base-url: ${AI_BASE_URL:https://9routerhelios.duckdns.org/v1}
+    model: ${AI_MODEL:}
+    timeout: ${AI_TIMEOUT:60s}
+    max-context-items: ${AI_MAX_CONTEXT_ITEMS:8}
 

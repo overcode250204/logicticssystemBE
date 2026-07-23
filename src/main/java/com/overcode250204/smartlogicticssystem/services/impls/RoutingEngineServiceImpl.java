@@ -31,6 +31,7 @@ public class RoutingEngineServiceImpl implements IRoutingEngineService {
     private final OrderRepository orderRepository;
     private final LinehaulTripRepository linehaulTripRepository;
     private final PalletRepository palletRepository;
+    private final PalletItemRepository palletItemRepository;
     private final NotificationRepository notificationRepository;
     private final S3FileService s3FileService;
     private final VehicleRepository vehicleRepository;
@@ -130,6 +131,19 @@ public class RoutingEngineServiceImpl implements IRoutingEngineService {
     protected void triggerPalletization(RouteConfig route, List<Order> eligibleOrders) {
         log.info("Triggering palletization for Route: {}", route.getRouteName());
 
+        List<Order> ordersWithoutPallet = eligibleOrders.stream()
+                .filter(order -> order.getOrderId() != null)
+                .filter(order -> !palletItemRepository.existsByOrder_OrderId(order.getOrderId()))
+                .toList();
+
+        if (ordersWithoutPallet.isEmpty()) {
+            log.info(
+                    "Skipped palletization because all eligible orders already belong to pallets. routeId={}",
+                    route.getRouteId()
+            );
+            return;
+        }
+
         // Create Shipment Batch (LinehaulTrip)
         LinehaulTrip trip = new LinehaulTrip();
         trip.setLinehaulTripCode(generateUniqueLinehaulTripCode());
@@ -163,7 +177,7 @@ public class RoutingEngineServiceImpl implements IRoutingEngineService {
         BigDecimal totalWeight = BigDecimal.ZERO;
         BigDecimal totalVolume = BigDecimal.ZERO;
 
-        for (Order order : eligibleOrders) {
+        for (Order order : ordersWithoutPallet) {
             order.setStatus(OrderStatus.READY_TO_PICK);
             PalletItem item = new PalletItem();
             item.setOrder(order);
@@ -181,7 +195,7 @@ public class RoutingEngineServiceImpl implements IRoutingEngineService {
         pallet.setTotalWeightKg(totalWeight);
         pallet.setTotalVolumeM3(totalVolume);
         palletRepository.save(pallet);
-        sendPalletizationTaskNotifications(route, trip, pallet, eligibleOrders.size());
+        sendPalletizationTaskNotifications(route, trip, pallet, ordersWithoutPallet.size());
     }
 
     private void sendPalletizationTaskNotifications(RouteConfig route, LinehaulTrip trip, Pallet pallet, int orderCount) {
