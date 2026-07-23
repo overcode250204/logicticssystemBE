@@ -147,16 +147,19 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(BaseResponse.error(HttpStatus.BAD_REQUEST.value(), message));
     }private String buildUniqueMessage(String column, String constraint) {
+        // Map các constraint nghiệp vụ đã đặt tên về message rõ ràng, KHÔNG lộ tên
+        // constraint (kể cả tên Hibernate sinh) ra frontend.
+        if (com.overcode250204.smartlogicticssystem.entities.LinehaulTripDriver.UQ_TRIP_DRIVER
+                .equalsIgnoreCase(constraint)) {
+            return com.overcode250204.smartlogicticssystem.exception.DriverErrorCode.Messages.DRIVER_DUPLICATE_IN_TRIP;
+        }
+
         if (column != null && !column.isBlank()) {
             return "Giá trị của trường '" + column
                     + "' đã tồn tại. Vui lòng sử dụng giá trị khác.";
         }
 
-        if (constraint != null && !constraint.isBlank()) {
-            return "Dữ liệu bị trùng lặp. Ràng buộc bị vi phạm: '"
-                    + constraint + "'.";
-        }
-
+        // Không đưa tên constraint ra ngoài để tránh lộ chi tiết schema.
         return "Dữ liệu đã tồn tại hoặc bị trùng lặp.";
     }
 

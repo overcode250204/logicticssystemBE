@@ -46,6 +46,15 @@ public class NotificationServiceImpl implements NotificationService {
     }
 
     @Override
+    public List<Notification> getNotifications(Long recipientId, Boolean isRead) {
+        if (isRead == null) {
+            return getNotifications(recipientId);
+        }
+        return notificationRepository
+                .findByRecipientIdAndIsReadOrderByCreatedAtDesc(recipientId, isRead);
+    }
+
+    @Override
     public long countUnread(Long recipientId) {
         return notificationRepository
                 .countByRecipientIdAndIsReadFalse(recipientId);

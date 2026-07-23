@@ -11,6 +11,8 @@ import java.util.List;
 public interface NotificationRepository extends JpaRepository<Notification, Long> {
     List<Notification> findByRecipientIdOrderByCreatedAtDesc(Long recipientId);
 
+    List<Notification> findByRecipientIdAndIsReadOrderByCreatedAtDesc(Long recipientId, Boolean isRead);
+
     long countByRecipientIdAndIsReadFalse(Long recipientId);
 
     boolean existsByRecipientIdAndReferenceTypeAndReferenceIdAndType(

@@ -27,6 +27,7 @@ import com.overcode250204.smartlogicticssystem.vrp.OsrmRoutingService;
 @RequiredArgsConstructor
 public class LinehaulTripServiceImpl extends BaseServiceImpl implements ILinehaulTripService {
     private final LinehaulTripRepository linehaulTripRepository;
+    private final LinehaulTripDriverRepository linehaulTripDriverRepository;
     private final VehicleRepository vehicleRepository;
     private final DriverRepository driverRepository;
     private final RouteConfigRepository routeConfigRepository;
@@ -151,6 +152,13 @@ public class LinehaulTripServiceImpl extends BaseServiceImpl implements ILinehau
             List<Long> newDriverIds = request.getLinehaulTripDriverUpdateRequests().stream()
                     .map(LinehaulTripDriverUpdateRequest::getDriverId).toList();
 
+            // Chặn trùng / nhiều tài xế chính / chồng lấn chuyến khác (bỏ qua chính chuyến này).
+            validateDriverAssignments(
+                    newDriverIds,
+                    request.getLinehaulTripDriverUpdateRequests().stream()
+                            .map(LinehaulTripDriverUpdateRequest::getRole).toList(),
+                    linehaulTrip.getLinehaulId());
+
             // Release old drivers not in the new list
             for (LinehaulTripDriver tripDriver : linehaulTrip.getTripDrivers()) {
                 Driver driver = tripDriver.getDriver();
@@ -252,7 +260,93 @@ public class LinehaulTripServiceImpl extends BaseServiceImpl implements ILinehau
         }
     }
 
+    private static final List<LinehaulTripStatus> ACTIVE_TRIP_STATUSES =
+            List.of(LinehaulTripStatus.PREPARING, LinehaulTripStatus.CAN_START, LinehaulTripStatus.EN_ROUTE);
+
+    /**
+     * Kiểm tra tính hợp lệ của danh sách phân công tài xế cho MỘT chuyến:
+     *  1. Mỗi tài xế chỉ xuất hiện tối đa một lần (đồng thời chặn: chính kiêm phụ,
+     *     và trùng trong danh sách phụ).
+     *  2. Tối đa một tài xế chính (MAIN).
+     *  3. Không tài xế nào đang tham gia một chuyến active khác (chống chồng lấn;
+     *     chuyến chưa có start/end time rõ ràng nên dùng trạng thái active).
+     * excludeTripId = null khi tạo mới; = id chuyến khi cập nhật để bỏ qua chính nó.
+     */
+    private void validateDriverAssignments(List<Long> driverIds, List<DriverRole> roles, Long excludeTripId) {
+        if (driverIds == null || driverIds.isEmpty()) {
+            return;
+        }
+
+        // (1) Trùng tài xế trong cùng chuyến.
+        java.util.Set<Long> seen = new java.util.HashSet<>();
+        for (Long driverId : driverIds) {
+            if (driverId != null && !seen.add(driverId)) {
+                throw new AppException(DriverErrorCode.DRIVER_DUPLICATE_IN_TRIP);
+            }
+        }
+
+        // (2) Nhiều hơn một tài xế chính.
+        long mainCount = roles.stream().filter(DriverRole.MAIN::equals).count();
+        if (mainCount > 1) {
+            throw new AppException(DriverErrorCode.MULTIPLE_MAIN_DRIVERS);
+        }
+
+        // (3) Chồng lấn với chuyến active khác.
+        // Khoá ghi hàng Driver TRƯỚC khi kiểm tra active assignment để chống race:
+        // hai request đồng thời gán cùng driver sẽ bị tuần tự hoá, request sau thấy
+        // assignment của request trước (đã commit) và bị chặn. Đây là nguồn chặn
+        // race ở tầng ứng dụng; unique(linehaul_id, driver_id) chỉ chặn trong-cùng-chuyến.
+        // Khoá theo thứ tự driverId tăng dần để hai giao dịch không khoá chéo
+        // (tránh deadlock khi cùng gán tập driver giao nhau theo thứ tự khác nhau).
+        List<Long> lockOrder = driverIds.stream()
+                .filter(java.util.Objects::nonNull)
+                .distinct()
+                .sorted()
+                .toList();
+        for (Long driverId : lockOrder) {
+            driverRepository.findByIdForUpdate(driverId)
+                    .orElseThrow(() -> new AppException(DriverErrorCode.DRIVER_NOT_FOUND));
+            boolean onAnotherTrip = !linehaulTripDriverRepository
+                    .findActiveAssignmentsForDriver(driverId, ACTIVE_TRIP_STATUSES, excludeTripId)
+                    .isEmpty();
+            if (onAnotherTrip) {
+                throw new AppException(DriverErrorCode.DRIVER_ALREADY_ON_ANOTHER_TRIP);
+            }
+        }
+    }
+
+    /**
+     * Kiểm tra lại phân công tài xế của một chuyến ĐÃ TỒN TẠI (dùng khi xuất bến).
+     * Bắt buộc: đúng một MAIN, không trùng driver, driver không ở chuyến active khác.
+     */
+    private void revalidateExistingAssignments(LinehaulTrip trip) {
+        List<LinehaulTripDriver> tds = trip.getTripDrivers();
+        if (tds == null) {
+            throw new AppException(DriverErrorCode.MAIN_DRIVER_NOT_FOUND);
+        }
+        List<Long> driverIds = tds.stream()
+                .map(td -> td.getDriver() != null ? td.getDriver().getDriverId() : null)
+                .toList();
+        List<DriverRole> roles = tds.stream().map(LinehaulTripDriver::getRole).toList();
+
+        // Xuất bến bắt buộc có MAIN (create/update chỉ chặn >1). Trường hợp >1 để
+        // validateDriverAssignments ném MULTIPLE_MAIN_DRIVERS.
+        long mainCount = roles.stream().filter(DriverRole.MAIN::equals).count();
+        if (mainCount == 0) {
+            throw new AppException(DriverErrorCode.MAIN_DRIVER_NOT_FOUND);
+        }
+        validateDriverAssignments(driverIds, roles, trip.getLinehaulId());
+    }
+
     private List<LinehaulTripDriver> mapDrivers(List<LinehaulTripDriverCreateRequest> requests, LinehaulTrip linehaulTrip){
+
+        if (requests != null) {
+            validateDriverAssignments(
+                    requests.stream().map(LinehaulTripDriverCreateRequest::getDriverId).toList(),
+                    requests.stream().map(LinehaulTripDriverCreateRequest::getRole).toList(),
+                    null);
+        }
+
 
 
         List<LinehaulTripDriver> results = new ArrayList<>();
@@ -403,6 +497,10 @@ public class LinehaulTripServiceImpl extends BaseServiceImpl implements ILinehau
         if (!LinehaulTripStatus.CAN_START.equals(linehaulTrip.getStatus())) {
             throw new AppException(LinehaulTripErrorCode.LINEHAUL_TRIP_CAN_NOT_EN_ROUTE);
         }
+
+        // Revalidate lần cuối trước khi thực sự lăn bánh (giữa can-start và dispatch
+        // có thể phát sinh phân công chồng lấn hoặc thay đổi driver).
+        revalidateExistingAssignments(linehaulTrip);
 
         if (linehaulTrip.getVehicle() == null) {
             throw new AppException(VehicleErrorCode.VEHICLE_NOT_FOUND);
@@ -610,11 +708,9 @@ public class LinehaulTripServiceImpl extends BaseServiceImpl implements ILinehau
             throw new AppException(VehicleErrorCode.VEHICLE_NOT_FOUND);
         }
 
-        boolean hasMainDriver = linehaulTrip.getTripDrivers() != null && linehaulTrip.getTripDrivers().stream()
-                .anyMatch(td -> DriverRole.MAIN.equals(td.getRole()));
-        if (!hasMainDriver) {
-            throw new AppException(DriverErrorCode.MAIN_DRIVER_NOT_FOUND);
-        }
+        // Revalidate phân công tài xế ngay trước khi xuất bến (chống dữ liệu stale:
+        // trùng driver cũ, thiếu/nhiều MAIN, hoặc driver vừa bị gán chuyến khác).
+        revalidateExistingAssignments(linehaulTrip);
 
         if (linehaulTrip.getPallets() == null || linehaulTrip.getPallets().isEmpty()) {
             throw new AppException(LinehaulTripErrorCode.LINEHAUL_TRIP_CAN_NOT_EN_ROUTE);

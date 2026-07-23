@@ -26,9 +26,10 @@ public class NotificationController extends BaseController {
 
     @GetMapping
     public ResponseEntity<BaseResponse<List<Notification>>> getNotificationsByQuery(
-            @RequestParam Long recipientId
+            @RequestParam Long recipientId,
+            @RequestParam(required = false) Boolean isRead
     ) {
-        return success(notificationService.getNotifications(recipientId), "Notifications retrieved successfully");
+        return success(notificationService.getNotifications(recipientId, isRead), "Notifications retrieved successfully");
     }
 
     @GetMapping("/{recipientId}")
