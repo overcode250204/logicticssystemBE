@@ -14,10 +14,12 @@ import java.util.List;
 public class SeedDataRunner implements CommandLineRunner {
 
     private final List<DataSeeder> dataSeeders;
+    private final DatabaseSequenceSynchronizer databaseSequenceSynchronizer;
 
     @Override
     public void run(String... args) {
         log.info("========== START SEED DATA ==========");
+        databaseSequenceSynchronizer.synchronize();
 
         dataSeeders.stream()
                 .sorted(Comparator.comparingInt(DataSeeder::getOrder))
