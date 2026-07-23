@@ -36,4 +36,11 @@ public interface LocalTripRepository extends JpaRepository<LocalTrip, Long> {
                                     @Param("month") Integer month, 
                                     @Param("searchKeyword") String searchKeyword, 
                                     Pageable pageable);
+
+    @Query("""
+    SELECT t.status, COUNT(t)
+    FROM LocalTrip t
+    GROUP BY t.status
+    """)
+    List<Object[]> countLocalTripsByStatus();
 }

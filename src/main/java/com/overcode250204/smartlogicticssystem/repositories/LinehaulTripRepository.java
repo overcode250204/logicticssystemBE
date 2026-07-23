@@ -37,4 +37,11 @@ public interface LinehaulTripRepository extends JpaRepository<LinehaulTrip, Long
 
     @Query("SELECT t FROM LinehaulTrip t WHERE t.status = 'EN_ROUTE' ORDER BY t.departureTime ASC")
     List<LinehaulTrip> findDelayedTrips(Pageable pageable);
+
+    @Query("""
+    SELECT t.status, COUNT(t)
+    FROM LinehaulTrip t
+    GROUP BY t.status
+    """)
+    List<Object[]> countLinehaulTripsByStatus();
 }

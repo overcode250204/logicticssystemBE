@@ -46,5 +46,13 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     """)
     Long countFinishedOrders(LocalDateTime from,
                              LocalDateTime to);
+
+    @Query("""
+    SELECT o.status, COUNT(o)
+    FROM Order o
+    GROUP BY o.status
+    """)
+    List<Object[]> countOrdersByStatus();
+
     List<Order> findByCustomer_UserIdOrderByCreatedAtDesc(Long userId);
 }
