@@ -29,4 +29,17 @@ public interface LinehaulTripDriverRepository extends JpaRepository<LinehaulTrip
             @Param("driverId") Long driverId,
             @Param("statuses") List<LinehaulTripStatus> statuses,
             @Param("excludeTripId") Long excludeTripId);
+
+    /**
+     * Danh sách driverId đang được phân công vào một chuyến linehaul active.
+     * Dùng để loại các tài xế này khỏi dropdown chọn tài xế — phản ánh đúng cùng
+     * điều kiện mà validation tạo/sửa chuyến áp dụng (findActiveAssignmentsForDriver),
+     * nhờ đó dropdown và validation không còn lệch nhau.
+     */
+    @Query("""
+            SELECT DISTINCT td.driver.driverId FROM LinehaulTripDriver td
+            WHERE td.linehaulTrip.status IN :statuses
+            """)
+    List<Long> findDriverIdsWithActiveAssignments(
+            @Param("statuses") List<LinehaulTripStatus> statuses);
 }

@@ -40,6 +40,27 @@ public class NotificationServiceImpl implements NotificationService {
     }
 
     @Override
+    public Notification createPalletizationTaskNotification(
+            Long recipientId,
+            String palletCode
+    ) {
+        Notification notification = new Notification();
+
+        notification.setTitle("Nhiệm vụ đóng pallet");
+        notification.setMessage("Pallet %s đã sẵn sàng, vui lòng quét đơn hàng."
+                .formatted(palletCode));
+
+        notification.setType(NotificationType.PALLETIZATION_TASK);
+        notification.setRecipientId(recipientId);
+
+        notification.setIsRead(false);
+        notification.setCreatedAt(LocalDateTime.now());
+        notification.setReadAt(null);
+
+        return notificationRepository.save(notification);
+    }
+
+    @Override
     public List<Notification> getNotifications(Long recipientId) {
         return notificationRepository
                 .findByRecipientIdOrderByCreatedAtDesc(recipientId);

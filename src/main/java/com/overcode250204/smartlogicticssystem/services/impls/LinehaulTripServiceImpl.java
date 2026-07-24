@@ -260,8 +260,9 @@ public class LinehaulTripServiceImpl extends BaseServiceImpl implements ILinehau
         }
     }
 
+    // Dùng chung nguồn sự thật với bộ lọc dropdown (DriverController) để không lệch.
     private static final List<LinehaulTripStatus> ACTIVE_TRIP_STATUSES =
-            List.of(LinehaulTripStatus.PREPARING, LinehaulTripStatus.CAN_START, LinehaulTripStatus.EN_ROUTE);
+            LinehaulTripStatus.ACTIVE_STATUSES;
 
     /**
      * Kiểm tra tính hợp lệ của danh sách phân công tài xế cho MỘT chuyến:

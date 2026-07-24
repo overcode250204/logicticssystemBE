@@ -12,6 +12,14 @@ public interface NotificationService {
             int quantity
     );
 
+    /**
+     * Thông báo cho staff biết một pallet đã sẵn sàng để quét đơn (status CAN_SEAL).
+     */
+    Notification createPalletizationTaskNotification(
+            Long recipientId,
+            String palletCode
+    );
+
     List<Notification> getNotifications(Long recipientId);
 
     List<Notification> getNotifications(Long recipientId, Boolean isRead);

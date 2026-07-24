@@ -16,7 +16,9 @@ import com.overcode250204.smartlogicticssystem.repositories.OrderRepository;
 import com.overcode250204.smartlogicticssystem.repositories.PalletItemRepository;
 import com.overcode250204.smartlogicticssystem.repositories.PalletRepository;
 import com.overcode250204.smartlogicticssystem.repositories.RouteConfigRepository;
+import com.overcode250204.smartlogicticssystem.repositories.UserRepository;
 import com.overcode250204.smartlogicticssystem.services.IPalletService;
+import com.overcode250204.smartlogicticssystem.services.NotificationRealtimeService;
 import com.overcode250204.smartlogicticssystem.services.S3FileService;
 import com.overcode250204.smartlogicticssystem.utils.BarcodeGeneratorUtil;
 import lombok.RequiredArgsConstructor;
@@ -42,6 +44,8 @@ public class PalletServiceImpl extends BaseServiceImpl implements IPalletService
     private final RouteConfigRepository routeConfigRepository;
     private final PalletItemMapper palletItemMapper;
     private final PalletItemRepository palletItemRepository;
+    private final UserRepository userRepository;
+    private final NotificationRealtimeService notificationRealtimeService;
 
     private void checkAdminRole(int roleId) {
         if (roleId != ADMIN_ROLE_ID) {
@@ -83,6 +87,10 @@ public class PalletServiceImpl extends BaseServiceImpl implements IPalletService
         Pallet pallet = new Pallet();
         pallet.setRouteConfig(routeConfig);
         pallet.setStatus(PalletStatus.CREATING);
+        // Đánh dấu là nhiệm vụ của staff: query task staff (list + detail) lọc theo
+        // isCreatedSystem = true. Không set thì pallet admin tạo tay sẽ không hiện
+        // trong danh sách nhiệm vụ của staff để quét.
+        pallet.setIsCreatedSystem(true);
 
         String palletCode = generateUniquePalletCode();
         pallet.setPalletCode(palletCode);
@@ -455,6 +463,34 @@ public class PalletServiceImpl extends BaseServiceImpl implements IPalletService
 
         pallet.setStatus(PalletStatus.CAN_SEAL);
         Pallet saved = palletRepository.save(pallet);
+
+        // Pallet giờ đã sẵn sàng để quét đơn -> thông báo cho toàn bộ staff đang hoạt động.
+        notifyStaffPalletReadyToScan(saved.getPalletCode());
+
         return palletMapper.toResponse(saved);
+    }
+
+    /**
+     * Gửi thông báo "pallet sẵn sàng để quét" tới mọi STAFF đang active.
+     * Nhiệm vụ pallet là hàng đợi toàn cục (không gắn kho/nhân sự cụ thể) nên
+     * broadcast cho tất cả staff; mỗi staff nhận realtime qua topic riêng của họ.
+     * Lỗi gửi thông báo không được làm hỏng thao tác chuyển trạng thái pallet.
+     */
+    private void notifyStaffPalletReadyToScan(String palletCode) {
+        if (palletCode == null) {
+            return;
+        }
+        try {
+            List<User> staffs = userRepository.findByRole_RoleIdInAndIsActiveTrue(List.of(STAFF_ROLE_ID));
+            for (User staff : staffs) {
+                if (staff.getUserId() != null) {
+                    notificationRealtimeService.sendPalletizationTaskNotification(staff.getUserId(), palletCode);
+                }
+            }
+        } catch (Exception ex) {
+            // Không chặn nghiệp vụ chính nếu kênh thông báo lỗi.
+            org.slf4j.LoggerFactory.getLogger(PalletServiceImpl.class)
+                    .warn("Failed to notify staff for pallet {}: {}", palletCode, ex.getMessage());
+        }
     }
 }

@@ -35,4 +35,20 @@ public class NotificationRealtimeServiceImpl implements NotificationRealtimeServ
                 topic
         );
     }
+
+    @Override
+    public void sendPalletizationTaskNotification(Long recipientId, String palletCode) {
+        Notification notification =
+                notificationService.createPalletizationTaskNotification(recipientId, palletCode);
+        String topic = "/topic/notifications/" + recipientId;
+        messagingTemplate.convertAndSend(topic, notification);
+
+        log.info(
+                "Sent palletization task notification successfully. recipientId={}, notificationId={}, palletCode={}, topic={}",
+                recipientId,
+                notification.getId(),
+                palletCode,
+                topic
+        );
+    }
 }

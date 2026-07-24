@@ -23,8 +23,8 @@ public interface PalletRepository extends JpaRepository<Pallet, Long> {
             SELECT DISTINCT p FROM Pallet p
             LEFT JOIN FETCH p.palletItems pi
             LEFT JOIN FETCH pi.order
-            WHERE p.isCreatedSystem = true
-            AND p.status IN :statuses
+            WHERE 
+                p.status IN :statuses
             ORDER BY p.createdAt DESC
             """)
     List<Pallet> findSystemTasksByStatusIn(@org.springframework.data.repository.query.Param("statuses") List<com.overcode250204.smartlogicticssystem.enums.PalletStatus> statuses);
@@ -34,7 +34,6 @@ public interface PalletRepository extends JpaRepository<Pallet, Long> {
             LEFT JOIN FETCH p.palletItems pi
             LEFT JOIN FETCH pi.order
             WHERE p.palletId = :palletId
-            AND p.isCreatedSystem = true
             """)
     Optional<Pallet> findSystemTaskByIdWithItemsAndOrders(@org.springframework.data.repository.query.Param("palletId") Long palletId);
 }
