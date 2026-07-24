@@ -121,7 +121,13 @@ public class PalletServiceImpl extends BaseServiceImpl implements IPalletService
     @Override
     public List<PalletResponseDTO> getStaffTasks(int roleId, int userId) {
         checkStaffOrAdminRole(roleId);
-        return palletRepository.findSystemTasksByStatusIn(List.of(PalletStatus.CREATING, PalletStatus.CAN_SEAL))
+        // Nhiệm vụ staff gồm 2 giai đoạn:
+        //  - Đóng pallet tại kho đi: CREATING, CAN_SEAL (quét + seal).
+        //  - Nhận hàng tại kho đến: IN_TRANSIT (xác nhận order/pallet đã đến -> ARRIVED).
+        // Thiếu IN_TRANSIT thì pallet giai đoạn nhận hàng không hiện trong danh sách,
+        // khiến staff không mở được màn xác nhận hàng đến kho.
+        return palletRepository.findSystemTasksByStatusIn(
+                        List.of(PalletStatus.CREATING, PalletStatus.CAN_SEAL, PalletStatus.IN_TRANSIT))
                 .stream()
                 .map(palletMapper::toResponse)
                 .toList();
