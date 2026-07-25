@@ -24,7 +24,6 @@ import org.springframework.web.bind.annotation.RestController;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
-import java.util.Optional;
 
 @RestController
 @Slf4j
@@ -50,13 +49,15 @@ public class LiveTrackingWebSocketController extends BaseController {
         log.info("Received location update for trip: {}, lat: {}, lng: {}", payload.getTrip_code(), payload.getLat(), payload.getLng());
 
         ActiveVehicleInfo info = liveTrackingCache.get(payload.getTrip_code());
-        LinehaulTrip trip = null;
+
+        // Fetch-join query: drivers / routeConfig / toWarehouse are initialized here,
+        // so nothing is a lazy proxy once the session is closed.
+        LinehaulTrip trip = linehaulTripRepository
+                .findByLinehaulTripCodeForTracking(payload.getTrip_code())
+                .orElse(null);
 
         if (info == null) {
-            // Try loading from database if not initialized in cache
-            Optional<LinehaulTrip> tripOpt = linehaulTripRepository.findByLinehaulTripCode(payload.getTrip_code());
-            if (tripOpt.isPresent()) {
-                trip = tripOpt.get();
+            if (trip != null) {
                 String shipperName = "Nguyễn Văn A";
                 if (trip.getTripDrivers() != null) {
                     for (LinehaulTripDriver tripDriver : trip.getTripDrivers()) {
@@ -89,14 +90,6 @@ public class LiveTrackingWebSocketController extends BaseController {
             } else {
                 log.warn("Trip code {} not found in system.", payload.getTrip_code());
                 return;
-            }
-        }
-
-        // Fetch destination from RouteConfig
-        if (trip == null) {
-            Optional<LinehaulTrip> tripOpt = linehaulTripRepository.findByLinehaulTripCode(payload.getTrip_code());
-            if (tripOpt.isPresent()) {
-                trip = tripOpt.get();
             }
         }
 

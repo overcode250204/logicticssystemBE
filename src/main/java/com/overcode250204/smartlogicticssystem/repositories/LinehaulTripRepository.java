@@ -16,6 +16,20 @@ public interface LinehaulTripRepository extends JpaRepository<LinehaulTrip, Long
     java.util.Optional<LinehaulTrip> findByLinehaulTripCode(String linehaulTripCode);
     List<LinehaulTrip> findByStatus(com.overcode250204.smartlogicticssystem.enums.LinehaulTripStatus status);
 
+    /**
+     * Load a trip with everything the live-tracking handler touches, so no lazy
+     * proxy is dereferenced after the persistence session is closed.
+     */
+    @Query("""
+    SELECT DISTINCT t FROM LinehaulTrip t
+    LEFT JOIN FETCH t.tripDrivers td
+    LEFT JOIN FETCH td.driver
+    LEFT JOIN FETCH t.routeConfig rc
+    LEFT JOIN FETCH rc.toWarehouse
+    WHERE t.linehaulTripCode = :linehaulTripCode
+    """)
+    java.util.Optional<LinehaulTrip> findByLinehaulTripCodeForTracking(@Param("linehaulTripCode") String linehaulTripCode);
+
     @Query("SELECT t FROM LinehaulTrip t WHERE YEAR(t.departureTime) = :year AND MONTH(t.departureTime) = :month")
     List<LinehaulTrip> findByYearAndMonth(@Param("year") int year, @Param("month") int month);
 
